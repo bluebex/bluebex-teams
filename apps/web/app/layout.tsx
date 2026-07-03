@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Bluebex Teams",
-  description: "Task management system",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({
