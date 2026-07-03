@@ -9,12 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
@@ -35,15 +35,15 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
-          username: deploy
+          username: admin
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             cd /opt/bluebex-teams
             git pull origin main
-            npm ci --omit=dev
+            npm ci
             npx prisma generate --schema packages/db/prisma/schema.prisma
             npx prisma migrate deploy --schema packages/db/prisma/schema.prisma
-            cd apps/api && npx tsc && cd ..
-            cd apps/web && npx next build && cd ..
+            cd apps/api && npx tsc && cd /opt/bluebex-teams
+            NEXT_PUBLIC_API_URL="https://teams.bluebex.com/api" npx --prefix apps/web next build
             sudo systemctl restart bluebex-api
             sudo systemctl restart bluebex-web
