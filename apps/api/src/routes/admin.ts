@@ -223,7 +223,7 @@ adminRouter.delete("/projects/:projectId/processes/:processId", async (req, res)
 adminRouter.post("/memberships/project", async (req, res) => {
   const body = z.object({ userId: z.string().min(1), projectId: z.string().min(1) }).parse(req.body);
 
-  const membership = await prisma.$transaction(async (tx) => {
+  const membership = await prisma.$transaction(async (tx: any) => {
     const created = await tx.projectMember.upsert({
       where: { projectId_userId: { projectId: body.projectId, userId: body.userId } },
       update: {},
@@ -285,7 +285,7 @@ adminRouter.post("/memberships/process/batch", async (req, res) => {
     return res.status(404).json({ error: "One or more processes not found" });
   }
 
-  const projectIds = [...new Set(processes.map((process) => process.projectId))];
+  const projectIds = [...new Set(processes.map((process: any) => process.projectId))];
   if (projectIds.length !== 1) {
     return res.status(400).json({ error: "All processes must belong to the same project" });
   }
@@ -338,11 +338,11 @@ adminRouter.get("/memberships", async (_req, res) => {
   ]);
 
   const projectAccessKeys = new Set(
-    projectMemberships.map((m) => `${m.userId}:${m.projectId}`),
+    projectMemberships.map((m: any) => `${m.userId}:${m.projectId}`),
   );
 
   res.json({
-    projectMemberships: projectMemberships.map((m) => ({
+    projectMemberships: projectMemberships.map((m: any) => ({
       userId: m.userId,
       userName: m.user.name,
       username: m.user.username,
@@ -351,8 +351,8 @@ adminRouter.get("/memberships", async (_req, res) => {
       createdAt: m.createdAt,
     })),
     processMemberships: processMemberships
-      .filter((m) => !projectAccessKeys.has(`${m.userId}:${m.process.project.id}`))
-      .map((m) => ({
+      .filter((m: any) => !projectAccessKeys.has(`${m.userId}:${m.process.project.id}`))
+      .map((m: any) => ({
         userId: m.userId,
         userName: m.user.name,
         username: m.user.username,
