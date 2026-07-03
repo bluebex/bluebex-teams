@@ -1,7 +1,7 @@
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  TODO: "Assigned",
+  TODO: "To do",
   IN_PROGRESS: "In progress",
   DONE: "Done",
 };

@@ -174,23 +174,47 @@ export default function TaskPage() {
     <main className="bb-container bb-page space-y-8">
       <PageHeader title={task?.title ?? "Task"} backHref="/" backLabel="← Back to tasks">
         {task ? (
-          <div className="flex items-center gap-3">
-            <span className="bb-admin-label">Status</span>
-            <select
-              className="bb-select bb-select--inline"
-              value={status}
-              onChange={(e) => {
-                const next = e.target.value as TaskStatus;
-                setStatus(next);
-                updateStatus(next);
-              }}
-            >
-              {TASK_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="bb-admin-label">Assign to</span>
+              <select
+                className="bb-select bb-select--inline"
+                value={task.assignedTo?.id ?? ""}
+                onChange={async (e) => {
+                  const val = e.target.value || null;
+                  await fetch(`${API_URL}/tasks/${id}`, {
+                    method: "PATCH",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ assignedToId: val }),
+                  });
+                  await refresh();
+                }}
+              >
+                <option value="">Unassigned</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="bb-admin-label">Status</span>
+              <select
+                className="bb-select bb-select--inline"
+                value={status}
+                onChange={(e) => {
+                  const next = e.target.value as TaskStatus;
+                  setStatus(next);
+                  updateStatus(next);
+                }}
+              >
+                {TASK_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         ) : null}
       </PageHeader>
