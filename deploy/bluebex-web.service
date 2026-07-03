@@ -4,11 +4,13 @@ After=network.target
 
 [Service]
 Type=simple
-User=deploy
-WorkingDirectory=/opt/bluebex-teams
+User=admin
+WorkingDirectory=/opt/bluebex-teams/apps/web/.next/standalone
+EnvironmentFile=/opt/bluebex-teams/.env
 Environment=NODE_ENV=production
 Environment=PORT=3000
-ExecStart=/usr/bin/node apps/web/.next/standalone/server.js
+Environment=HOSTNAME=0.0.0.0
+ExecStart=/usr/bin/node server.js
 Restart=on-failure
 RestartSec=5
 

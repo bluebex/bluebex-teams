@@ -4,7 +4,7 @@ After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=deploy
+User=admin
 WorkingDirectory=/opt/bluebex-teams
 EnvironmentFile=/opt/bluebex-teams/.env
 ExecStart=/usr/bin/node apps/api/dist/index.js
