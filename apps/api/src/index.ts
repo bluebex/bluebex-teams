@@ -9,9 +9,14 @@ import { tasksRouter } from "./routes/tasks.js";
 
 const app = express();
 
+const allowedOrigins: (string | RegExp)[] = [/^http:\/\/localhost:\d+$/];
+if (process.env.CORS_ORIGIN) {
+  allowedOrigins.push(...process.env.CORS_ORIGIN.split(",").map((o) => o.trim()));
+}
+
 app.use(
   cors({
-    origin: [/^http:\/\/localhost:\d+$/],
+    origin: allowedOrigins,
     credentials: true,
   }),
 );
