@@ -1,0 +1,84 @@
+import { prisma } from "@bluebex/db";
+
+export async function canAccessProcess(userId: string, processId: string) {
+  const process = await prisma.process.findUnique({
+    where: { id: processId },
+    select: { projectId: true },
+  });
+  if (!process) return { ok: false as const, reason: "Process not found" };
+
+  const [projectMember, processMember] = await Promise.all([
+    prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId: process.projectId, userId } },
+      select: { userId: true },
+    }),
+    prisma.processMember.findUnique({
+      where: { processId_userId: { processId, userId } },
+      select: { userId: true },
+    }),
+  ]);
+
+  const ok = Boolean(projectMember || processMember);
+  return ok
+    ? { ok: true as const, projectId: process.projectId }
+    : { ok: false as const, reason: "Not a member of project/process" };
+}
+
+export async function accessibleProcessIds(userId: string) {
+  const [projectMemberships, processMemberships] = await Promise.all([
+    prisma.projectMember.findMany({ where: { userId }, select: { projectId: true } }),
+    prisma.processMember.findMany({
+      where: { userId },
+      select: { processId: true, process: { select: { projectId: true } } },
+    }),
+  ]);
+
+  const projectIds = new Set(projectMemberships.map((m: { projectId: string }) => m.projectId));
+  const directProcessIds = new Set(processMemberships.map((m: { processId: string }) => m.processId));
+
+  if (projectIds.size === 0 && directProcessIds.size === 0) return [];
+
+  const processes = await prisma.process.findMany({
+    where: {
+      OR: [
+        { id: { in: [...directProcessIds] } },
+        { projectId: { in: [...projectIds] } },
+      ],
+    },
+    select: { id: true },
+  });
+  return processes.map((p: { id: string }) => p.id);
+}
+
+export async function accessibleProjectsWithProcesses(userId: string) {
+  const processIds = await accessibleProcessIds(userId);
+  if (processIds.length === 0) return [];
+
+  const processes = await prisma.process.findMany({
+    where: { id: { in: processIds } },
+    select: {
+      id: true,
+      name: true,
+      projectId: true,
+      project: { select: { id: true, name: true } },
+    },
+    orderBy: [{ project: { name: "asc" } }, { name: "asc" }],
+  });
+
+  const byProject = new Map<
+    string,
+    { id: string; name: string; processes: { id: string; name: string }[] }
+  >();
+  for (const process of processes) {
+    if (!byProject.has(process.projectId)) {
+      byProject.set(process.projectId, {
+        id: process.project.id,
+        name: process.project.name,
+        processes: [],
+      });
+    }
+    byProject.get(process.projectId)!.processes.push({ id: process.id, name: process.name });
+  }
+  return [...byProject.values()];
+}
+

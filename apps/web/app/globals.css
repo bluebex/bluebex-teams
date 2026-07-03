@@ -1,0 +1,995 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, Segoe UI,
+    Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.bb-app,
+.bb-admin {
+  --bb-accent: #0a0a0a;
+  --bb-muted: color-mix(in oklab, var(--foreground) 55%, transparent);
+  --bb-line: color-mix(in oklab, var(--foreground) 14%, transparent);
+  --bb-border: #d4d4d4;
+}
+
+.bb-container {
+  width: min(1100px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.bb-page {
+  flex: 1;
+  padding: 2.5rem 0 4rem;
+}
+
+.bb-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+}
+
+.bb-page-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bb-page-subtitle {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--bb-muted);
+  max-width: 36rem;
+}
+
+.bb-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+}
+
+.bb-back-link {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--bb-muted);
+  transition: opacity 0.12s ease;
+}
+
+.bb-back-link:hover {
+  opacity: 0.65;
+}
+
+.bb-text-link {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--foreground);
+  transition: opacity 0.12s ease;
+}
+
+.bb-text-link:hover {
+  opacity: 0.65;
+}
+
+.bb-card,
+.bb-panel {
+  border: 1px solid var(--bb-border);
+  background: #ffffff;
+  border-radius: 0;
+}
+
+.bb-panel {
+  padding: 1.5rem;
+}
+
+.bb-alert-error {
+  font-size: 0.875rem;
+  color: #b91c1c;
+  border-left: 2px solid #b91c1c;
+  padding-left: 0.75rem;
+}
+
+.bb-alert-info {
+  font-size: 0.875rem;
+  color: var(--bb-muted);
+  border-left: 2px solid var(--foreground);
+  padding-left: 0.75rem;
+}
+
+.bb-textarea {
+  width: 100%;
+  display: block;
+  margin-top: 0.35rem;
+  box-sizing: border-box;
+  min-height: 6.5rem;
+  resize: vertical;
+  border: 1px solid #d4d4d4;
+  border-radius: 0;
+  background-color: #ffffff;
+  padding: 0.7rem 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #171717;
+  outline: none;
+}
+
+.bb-textarea:focus {
+  border-color: #a3a3a3;
+}
+
+.bb-task-row-link {
+  display: block;
+  padding: 0.95rem 0;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.12s ease;
+}
+
+.bb-task-row-link:hover {
+  background: color-mix(in oklab, var(--foreground) 2.5%, transparent);
+}
+
+.bb-status-badge--unassigned {
+  border-color: #a3a3a3;
+  color: #737373;
+  background: #f5f5f5;
+}
+
+.bb-status-badge--todo {
+  color: #525252;
+}
+
+.bb-status-badge--in_progress {
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.bb-status-badge--done {
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.bb-task-comments-box {
+  width: 100%;
+}
+
+.bb-task-activity-tag {
+  margin-left: 0.5rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bb-muted);
+}
+
+.bb-comment-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.bb-mention-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 0.35rem);
+  z-index: 20;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  border: 1px solid #d4d4d4;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.bb-mention-suggestion {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.bb-mention-suggestion--active,
+.bb-mention-suggestion:hover {
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+.bb-mention-suggestion-name {
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.bb-mention-suggestion-username {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--bb-muted);
+}
+
+.bb-comment-mention {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: #1d4ed8;
+  background: color-mix(in oklab, #1d4ed8 10%, transparent);
+  padding: 0 0.2rem;
+  border-radius: 0.15rem;
+}
+
+.bb-editable-text {
+  cursor: pointer;
+  border-radius: 0.2rem;
+  transition: background 0.15s;
+}
+
+.bb-editable-text:hover {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+.bb-comment-block {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+
+.bb-comment-block:last-child {
+  border-bottom: none;
+}
+
+.bb-login-root {
+  flex: 1;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.bb-login-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@media (min-width: 900px) {
+  .bb-login-split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.bb-login-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 42vh;
+  background: #0a0a0a;
+  color: #fafafa;
+}
+
+@media (min-width: 900px) {
+  .bb-login-visual {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+.bb-login-visual-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 2.5rem;
+  text-align: center;
+}
+
+.bb-login-visual-brand {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: -0.02em;
+  text-transform: lowercase;
+  color: #ffffff;
+}
+
+.bb-login-form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  background: var(--background);
+  min-height: 58vh;
+}
+
+@media (min-width: 900px) {
+  .bb-login-form-side {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+.bb-login-form-wrap {
+  width: min(100%, 24rem);
+}
+
+.bb-login-form-header {
+  margin-bottom: 2rem;
+}
+
+.bb-login-form-title {
+  margin-top: 0.5rem;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.bb-login-form-subtitle {
+  margin-top: 0.65rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--bb-muted);
+}
+
+.bb-login-form-hint {
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  color: var(--bb-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  .bb-card,
+  .bb-panel {
+    border-color: #525252;
+    background: #171717;
+  }
+
+  .bb-textarea {
+    border-color: #525252;
+    background-color: #262626;
+    color: #fafafa;
+  }
+
+  .bb-textarea:focus {
+    border-color: #737373;
+  }
+}
+
+.bb-admin-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bb-muted);
+}
+
+.bb-admin-title {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.bb-admin-section {
+  border: 1px solid var(--bb-line);
+  padding: 2rem 1.75rem;
+}
+
+.bb-admin-panel {
+  border: 1px solid var(--bb-line);
+  padding: 1.5rem 1.25rem;
+}
+
+.bb-admin-list-box {
+  border: 1px solid #d4d4d4;
+  background: #ffffff;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.bb-admin-list-box-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem 1.5rem;
+  border-bottom: 1px solid #d4d4d4;
+  background: color-mix(in oklab, var(--background) 96%, var(--foreground) 4%);
+}
+
+.bb-task-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #d4d4d4;
+  background: var(--background);
+}
+
+.bb-task-search-main {
+  display: block;
+  width: 100%;
+}
+
+.bb-task-search-main .bb-admin-input {
+  width: 100%;
+}
+
+.bb-task-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+.bb-task-filter-field {
+  display: block;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .bb-task-filter-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bb-admin-list-box-title {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.bb-admin-list-box-body {
+  padding: 0.25rem 1.5rem 0.5rem;
+  overflow-x: auto;
+}
+
+.bb-admin-list-box-footer {
+  padding: 1.1rem 1.5rem 1.35rem;
+  border-top: 1px solid #d4d4d4;
+  background: color-mix(in oklab, var(--background) 98%, var(--foreground) 2%);
+}
+
+.bb-admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.bb-admin-modal {
+  width: min(100%, 28rem);
+  max-height: min(90vh, 640px);
+  overflow-y: auto;
+  border: 1px solid #d4d4d4;
+  background: #ffffff;
+  color: #171717;
+  border-radius: 0;
+  padding: 1.75rem 1.5rem;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  .bb-admin-modal {
+    border-color: #525252;
+    background: #171717;
+    color: #fafafa;
+  }
+}
+
+.bb-admin-modal-wide {
+  width: min(100%, 36rem);
+}
+
+.bb-admin-modal-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.bb-admin-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--bb-line);
+}
+
+.bb-admin-input,
+.bb-input {
+  width: 100%;
+  display: block;
+  margin-top: 0.35rem;
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  border: 1px solid #d4d4d4;
+  border-radius: 0;
+  background-color: #ffffff;
+  padding: 0.7rem 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #171717;
+  outline: none;
+}
+
+.bb-admin-select,
+.bb-select {
+  width: 100%;
+  display: block;
+  margin-top: 0.35rem;
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  border: 1px solid #d4d4d4;
+  border-radius: 0;
+  background-color: #ffffff;
+  padding: 0.7rem 2.5rem 0.7rem 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #171717;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+}
+
+.bb-admin-input::placeholder,
+.bb-input::placeholder {
+  color: #a3a3a3;
+}
+
+.bb-admin-input:focus,
+.bb-input:focus,
+.bb-admin-select:focus,
+.bb-select:focus {
+  border-color: #a3a3a3;
+  box-shadow: none;
+}
+
+.bb-admin-select:disabled,
+.bb-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background-color: #fafafa;
+}
+
+.bb-select--inline {
+  margin-top: 0;
+  width: auto;
+  min-width: 10rem;
+}
+
+/* Extra specificity vs Tailwind preflight on app pages */
+select.bb-select,
+input.bb-input,
+textarea.bb-textarea {
+  border: 1px solid #d4d4d4 !important;
+  background-color: #ffffff !important;
+  color: #171717 !important;
+  border-radius: 0 !important;
+}
+
+select.bb-select {
+  min-height: 2.75rem !important;
+  padding: 0.7rem 2.5rem 0.7rem 0.75rem !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 1rem !important;
+}
+
+input.bb-input {
+  min-height: 2.75rem !important;
+  padding: 0.7rem 0.75rem !important;
+}
+
+textarea.bb-textarea {
+  min-height: 6.5rem !important;
+  padding: 0.7rem 0.75rem !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  select.bb-select,
+  input.bb-input,
+  textarea.bb-textarea {
+    border-color: #525252 !important;
+    background-color: #262626 !important;
+    color: #fafafa !important;
+  }
+
+  select.bb-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .bb-admin-input,
+  .bb-input {
+    border-color: #525252;
+    background-color: #262626;
+    color: #fafafa;
+  }
+
+  .bb-admin-select,
+  .bb-select {
+    border-color: #525252;
+    background-color: #262626;
+    color: #fafafa;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  .bb-admin-input::placeholder,
+  .bb-input::placeholder {
+    color: #737373;
+  }
+
+  .bb-admin-input:focus,
+  .bb-input:focus,
+  .bb-admin-select:focus,
+  .bb-select:focus {
+    border-color: #737373;
+  }
+
+  .bb-admin-select:disabled,
+  .bb-select:disabled {
+    background-color: #1a1a1a;
+  }
+}
+
+/* Modal fields: extra specificity vs Tailwind preflight */
+.bb-admin-modal .bb-admin-input,
+.bb-admin-modal .bb-input {
+  border: 1px solid #d4d4d4 !important;
+  background-color: #ffffff !important;
+  color: #171717 !important;
+  min-height: 2.75rem !important;
+}
+
+.bb-admin-modal .bb-admin-select,
+.bb-admin-modal .bb-select {
+  border: 1px solid #d4d4d4 !important;
+  background-color: #ffffff !important;
+  color: #171717 !important;
+  min-height: 2.75rem !important;
+  padding: 0.7rem 2.5rem 0.7rem 0.75rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 1rem !important;
+}
+
+.bb-admin-modal .bb-admin-input:focus,
+.bb-admin-modal .bb-input:focus,
+.bb-admin-modal .bb-admin-select:focus,
+.bb-admin-modal .bb-select:focus {
+  border-color: #a3a3a3 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bb-admin-modal .bb-admin-input,
+  .bb-admin-modal .bb-input {
+    border-color: #525252 !important;
+    background-color: #262626 !important;
+    color: #fafafa !important;
+  }
+
+  .bb-admin-modal .bb-admin-select,
+  .bb-admin-modal .bb-select {
+    border-color: #525252 !important;
+    background-color: #262626 !important;
+    color: #fafafa !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  }
+
+  .bb-admin-modal .bb-admin-input:focus,
+  .bb-admin-modal .bb-input:focus,
+  .bb-admin-modal .bb-admin-select:focus,
+  .bb-admin-modal .bb-select:focus {
+    border-color: #737373 !important;
+  }
+}
+
+.bb-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--foreground);
+  color: var(--background);
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.bb-admin-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.bb-admin-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.bb-admin-btn-outline {
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--bb-line);
+}
+
+.bb-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.bb-admin-table th {
+  text-align: left;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bb-muted);
+  padding: 0.85rem 0 0.9rem;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.bb-admin-table td {
+  padding: 0.95rem 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+  vertical-align: top;
+}
+
+.bb-admin-table tbody tr {
+  transition: background-color 0.12s ease;
+}
+
+.bb-admin-table tbody tr:hover {
+  background: color-mix(in oklab, var(--foreground) 2.5%, transparent);
+}
+
+.bb-admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.bb-admin-cell-primary {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--foreground);
+}
+
+.bb-task-number {
+  display: block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--bb-muted);
+  margin-top: 0.25rem;
+}
+
+.bb-admin-cell-secondary {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  letter-spacing: -0.02em;
+  color: var(--bb-muted);
+}
+
+.bb-admin-cell-sub {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+
+.bb-admin-cell-date {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--bb-muted);
+}
+
+.bb-admin-cell-empty {
+  padding: 2.25rem 0 !important;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--bb-muted);
+}
+
+.bb-admin-badge {
+  display: inline-block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #d4d4d4;
+  line-height: 1;
+}
+
+.bb-admin-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.bb-admin-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #d4d4d4;
+  border-radius: 0;
+  background: #ffffff;
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.bb-admin-icon-btn:hover {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  border-color: color-mix(in oklab, var(--foreground) 28%, transparent);
+}
+
+.bb-admin-icon-btn--danger {
+  color: #b91c1c;
+}
+
+.bb-admin-icon-btn--danger:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.bb-admin-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #d4d4d4;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.bb-admin-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.bb-admin-checklist-item:last-child {
+  border-bottom: none;
+}
+
+.bb-admin-checklist-item:hover {
+  background: color-mix(in oklab, var(--foreground) 3%, transparent);
+}
+
+.bb-admin-checkbox {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--foreground);
+  cursor: pointer;
+}
+
+.bb-admin-checklist-empty {
+  padding: 0.85rem 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bb-admin-list-box {
+    border-color: #525252;
+    background: #171717;
+  }
+
+  .bb-admin-list-box-header,
+  .bb-admin-list-box-footer,
+  .bb-task-filters {
+    border-color: #525252;
+  }
+
+  .bb-admin-table th {
+    border-bottom-color: #525252;
+  }
+
+  .bb-admin-badge {
+    border-color: #525252;
+  }
+
+  .bb-admin-icon-btn {
+    border-color: #525252;
+    background: #171717;
+  }
+
+  .bb-admin-icon-btn:hover {
+    background: #262626;
+    border-color: #737373;
+  }
+
+  .bb-admin-icon-btn--danger:hover {
+    background: color-mix(in oklab, #b91c1c 15%, #171717);
+    border-color: #b91c1c;
+    color: #fca5a5;
+  }
+
+  .bb-admin-checklist {
+    border-color: #525252;
+  }
+}
+

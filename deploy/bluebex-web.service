@@ -1,0 +1,16 @@
+[Unit]
+Description=Bluebex Teams Web (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/bluebex-teams
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node apps/web/.next/standalone/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

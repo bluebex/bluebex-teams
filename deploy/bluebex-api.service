@@ -1,0 +1,15 @@
+[Unit]
+Description=Bluebex Teams API (Express)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/bluebex-teams
+EnvironmentFile=/opt/bluebex-teams/.env
+ExecStart=/usr/bin/node apps/api/dist/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

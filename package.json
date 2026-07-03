@@ -1,0 +1,24 @@
+{
+  "name": "bluebex-teams",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Task management system (Next.js + Express + Postgres + Prisma).",
+  "scripts": {
+    "dev": "concurrently -n web,api \"npm run dev -w @bluebex/web\" \"npm run dev -w @bluebex/api\"",
+    "build": "npm run build -w @bluebex/db && npm run build -w @bluebex/web && npm run build -w @bluebex/api",
+    "start": "concurrently -n web,api \"npm run start -w @bluebex/web\" \"npm run start -w @bluebex/api\"",
+    "db:migrate": "npm run db:migrate -w @bluebex/db",
+    "db:seed": "npm run db:seed -w @bluebex/db"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

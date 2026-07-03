@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: bluebex_teams_db
+    environment:
+      POSTGRES_USER: bluebex
+      POSTGRES_PASSWORD: bluebex
+      POSTGRES_DB: bluebex_teams
+    ports:
+      - "5432:5432"
+    volumes:
+      - bluebex_teams_pg:/var/lib/postgresql/data
+
+volumes:
+  bluebex_teams_pg:
+

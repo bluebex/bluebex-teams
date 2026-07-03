@@ -1,0 +1,30 @@
+{
+  "name": "@bluebex/api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Express API for Bluebex Teams.",
+  "scripts": {
+    "dev": "API_PORT=4000 tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "eslint ."
+  },
+  "type": "module",
+  "dependencies": {
+    "@bluebex/db": "file:../../packages/db",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "zod": "^4.0.17"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "eslint": "^9.39.4",
+    "tsx": "^4.22.5",
+    "typescript": "^5.9.3"
+  }
+}
