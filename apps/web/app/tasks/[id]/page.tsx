@@ -175,10 +175,11 @@ export default function TaskPage() {
     <main className="bb-container bb-page space-y-8">
       <PageHeader title={task?.title ?? "Task"} backHref="/" backLabel="← Back to tasks">
         {task ? (
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-4 flex-wrap" style={{ width: "100%" }}>
             <Link
               href={`/tasks/new?projectId=${task.project.id}&processId=${task.process.id}`}
               className="bb-admin-btn bb-admin-btn-outline"
+              style={{ marginRight: "auto" }}
             >
               Create similar task
             </Link>

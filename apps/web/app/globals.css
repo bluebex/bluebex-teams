@@ -46,16 +46,16 @@ body {
 
 .bb-page-header {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.25rem 2rem;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .bb-page-header-main {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .bb-page-subtitle {
@@ -69,7 +69,9 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.65rem 1rem;
+  width: 100%;
 }
 
 .bb-back-link {
