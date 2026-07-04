@@ -9,6 +9,12 @@ export const tasksRouter = Router();
 
 tasksRouter.use(requireAuth);
 
+async function assigneeLabel(userId: string | null | undefined) {
+  if (!userId) return "Unassigned";
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+  return user?.name ?? "Unknown";
+}
+
 tasksRouter.get("/", async (req: AuthedRequest, res) => {
   const processIds = await accessibleProcessIds(req.user!.id);
   if (processIds.length === 0) return res.json({ tasks: [] });
@@ -123,6 +129,10 @@ tasksRouter.get("/:id", async (req: AuthedRequest, res) => {
         orderBy: { createdAt: "asc" },
         include: { user: { select: { id: true, username: true, name: true } } },
       },
+      changeLogs: {
+        orderBy: { createdAt: "asc" },
+        include: { user: { select: { id: true, username: true, name: true } } },
+      },
     },
   });
   if (!task) return res.status(404).json({ error: "Not found" });
@@ -147,7 +157,15 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
 
   const existing = await prisma.task.findUnique({
     where: isNumber ? { taskNumber: Number(param) } : { id: param },
-    select: { id: true, processId: true, status: true },
+    select: {
+      id: true,
+      processId: true,
+      status: true,
+      title: true,
+      description: true,
+      assignedToId: true,
+      assignedTo: { select: { name: true } },
+    },
   });
   if (!existing) return res.status(404).json({ error: "Not found" });
   const id = existing.id;
@@ -163,6 +181,54 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
 
   const tx: Prisma.PrismaPromise<unknown>[] = [];
   tx.push(prisma.task.update({ where: { id }, data: updates }));
+
+  if (body.title && body.title !== existing.title) {
+    tx.push(
+      prisma.taskChangeLog.create({
+        data: {
+          taskId: id,
+          userId: req.user!.id,
+          field: "title",
+          fromValue: existing.title,
+          toValue: body.title,
+        },
+      }),
+    );
+  }
+
+  if (body.description !== undefined) {
+    const fromDesc = existing.description ?? "";
+    const toDesc = body.description;
+    if (fromDesc !== toDesc) {
+      tx.push(
+        prisma.taskChangeLog.create({
+          data: {
+            taskId: id,
+            userId: req.user!.id,
+            field: "description",
+            fromValue: fromDesc || null,
+            toValue: toDesc || null,
+          },
+        }),
+      );
+    }
+  }
+
+  if (body.assignedToId !== undefined && body.assignedToId !== existing.assignedToId) {
+    const fromName = existing.assignedTo?.name ?? "Unassigned";
+    const toName = await assigneeLabel(body.assignedToId);
+    tx.push(
+      prisma.taskChangeLog.create({
+        data: {
+          taskId: id,
+          userId: req.user!.id,
+          field: "assignedTo",
+          fromValue: fromName,
+          toValue: toName,
+        },
+      }),
+    );
+  }
 
   if (body.status && body.status !== existing.status) {
     tx.push(

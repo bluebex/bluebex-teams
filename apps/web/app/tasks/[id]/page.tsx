@@ -36,7 +36,21 @@ type Task = {
     createdAt: string;
     user: UserLite;
   }[];
+  changeLogs: {
+    id: string;
+    field: string;
+    fromValue: string | null;
+    toValue: string | null;
+    createdAt: string;
+    user: UserLite;
+  }[];
 };
+
+function formatChangeText(value: string | null | undefined) {
+  if (!value) return "";
+  if (value.length > 100) return `${value.slice(0, 100)}…`;
+  return value;
+}
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString(undefined, {
@@ -164,6 +178,17 @@ export default function TaskPage() {
         fromStatus: l.fromStatus,
         toStatus: l.toStatus,
       })),
+      ...task.changeLogs
+        .filter((l) => l.field === "title" || l.field === "description")
+        .map((l) => ({
+          kind: "change" as const,
+          id: l.id,
+          createdAt: l.createdAt,
+          user: l.user,
+          field: l.field,
+          fromValue: l.fromValue,
+          toValue: l.toValue,
+        })),
     ];
 
     return items.sort(
@@ -350,13 +375,20 @@ export default function TaskPage() {
                   <div key={`${item.kind}-${item.id}`} className="bb-comment-block">
                     <div className="bb-admin-cell-sub mb-1">
                       {item.user.name} • {formatDateTime(item.createdAt)}
+                      {item.kind === "change" ? ` · ${item.field}` : null}
                     </div>
                     {item.kind === "comment" ? (
                       <CommentBody body={item.body} users={users} />
-                    ) : (
+                    ) : item.kind === "status" ? (
                       <p className="text-sm bb-admin-cell-secondary">
                         {formatTaskStatusLogLabel(item.fromStatus)} →{" "}
                         {formatTaskStatusLogLabel(item.toStatus)}
+                      </p>
+                    ) : (
+                      <p className="text-sm bb-admin-cell-secondary">
+                        {formatChangeText(item.fromValue)}
+                        {formatChangeText(item.fromValue) ? " → " : "→ "}
+                        {formatChangeText(item.toValue)}
                       </p>
                     )}
                   </div>

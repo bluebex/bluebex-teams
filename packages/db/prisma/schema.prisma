@@ -32,6 +32,7 @@ model User {
   assignedTasks Task[]  @relation("TaskAssignedTo")
   comments      Comment[]
   statusLogs    TaskStatusLog[]
+  changeLogs    TaskChangeLog[]
   projectLinks  ProjectMember[]
   processLinks  ProcessMember[]
 }
@@ -125,6 +126,7 @@ model Task {
 
   comments   Comment[]
   statusLogs TaskStatusLog[]
+  changeLogs TaskChangeLog[]
 
   @@index([projectId])
   @@index([processId])
@@ -153,6 +155,22 @@ model TaskStatusLog {
   fromStatus TaskStatus?
   toStatus   TaskStatus
   createdAt  DateTime   @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([taskId])
+  @@index([userId])
+}
+
+model TaskChangeLog {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  field     String
+  fromValue String?
+  toValue   String?
+  createdAt DateTime @default(now())
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)

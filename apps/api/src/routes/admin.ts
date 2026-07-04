@@ -473,6 +473,7 @@ adminRouter.delete("/tasks/:taskId", async (req, res) => {
   await prisma.$transaction([
     prisma.comment.deleteMany({ where: { taskId } }),
     prisma.taskStatusLog.deleteMany({ where: { taskId } }),
+    prisma.taskChangeLog.deleteMany({ where: { taskId } }),
     prisma.task.delete({ where: { id: taskId } }),
   ]);
   res.json({ ok: true });
