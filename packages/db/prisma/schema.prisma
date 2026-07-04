@@ -111,6 +111,7 @@ model ProcessMember {
 
 model Task {
   id           String     @id @default(cuid())
+  publicId     String     @unique @db.VarChar(7)
   taskNumber   Int        @unique
   title        String
   description  String?

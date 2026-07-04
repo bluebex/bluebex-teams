@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AdminModal } from "@/components/AdminModal";
 import { AdminIconButton, DeleteIcon, EditIcon } from "@/components/AdminIconButton";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { TaskPublicId } from "@/components/TaskPublicId";
 import type { TaskPriority } from "@/lib/taskPriority";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -58,7 +59,7 @@ type ProcessMembership = {
 
 type Task = {
   id: string;
-  taskNumber: number;
+  publicId: string;
   title: string;
   status: "TODO" | "IN_PROGRESS" | "DONE";
   priority: TaskPriority;
@@ -401,7 +402,7 @@ export default function ProjectDetailPage() {
             <table className="bb-admin-table">
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th>ID</th>
                   <th>Title</th>
                   <th>Priority</th>
                   <th>Status</th>
@@ -422,7 +423,9 @@ export default function ProjectDetailPage() {
                 ) : (
                   tasks.map((t) => (
                     <tr key={t.id}>
-                      <td className="bb-admin-cell-secondary">{t.taskNumber}</td>
+                      <td>
+                        <TaskPublicId publicId={t.publicId} inline />
+                      </td>
                       <td className="bb-admin-cell-primary">{t.title}</td>
                       <td>
                         <PriorityBadge priority={t.priority} />
@@ -991,7 +994,7 @@ export default function ProjectDetailPage() {
       >
         <p className="text-sm leading-relaxed">
           Are you sure you want to delete task{" "}
-          <span className="bb-admin-cell-primary">#{taskToDelete?.taskNumber} {taskToDelete?.title}</span>?
+          <span className="bb-admin-cell-primary">{taskToDelete?.publicId} {taskToDelete?.title}</span>?
           {taskToDelete?.assignedTo ? (
             <> This task is assigned to <span className="bb-admin-cell-primary">{taskToDelete.assignedTo.name}</span>.</>
           ) : null}

@@ -112,7 +112,7 @@ function NewTaskContent() {
         return;
       }
       const data = await res.json();
-      router.push(`/tasks/${data.task.taskNumber}`);
+      router.push(`/${data.task.publicId}`);
     } finally {
       setSubmitting(false);
     }

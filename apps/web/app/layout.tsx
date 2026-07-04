@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Outfit, Source_Serif_4, DM_Mono } from "next/font/google";
 import { Sidebar } from "@/components/Sidebar";
+import { ToastProvider } from "@/components/ToastProvider";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -38,12 +39,14 @@ export default function RootLayout({
       className={`${outfit.variable} ${sourceSerif.variable} ${dmMono.variable} h-full antialiased`}
     >
       <body className="bb-app bb-admin min-h-full">
-        <div className="bb-shell">
-          <Suspense>
-            <Sidebar />
-          </Suspense>
-          <div className="bb-shell-main">{children}</div>
-        </div>
+        <ToastProvider>
+          <div className="bb-shell">
+            <Suspense>
+              <Sidebar />
+            </Suspense>
+            <div className="bb-shell-main">{children}</div>
+          </div>
+        </ToastProvider>
       </body>
     </html>
   );

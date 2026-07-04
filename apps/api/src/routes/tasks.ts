@@ -4,6 +4,7 @@ import { prisma } from "@bluebex/db";
 import type { Prisma } from "@prisma/client";
 import { requireAuth, type AuthedRequest } from "../lib/auth.js";
 import { accessibleProcessIds, accessibleProjectsWithProcesses, canAccessProcess } from "../lib/access.js";
+import { generateUniqueTaskPublicId, taskWhereFromParam } from "../lib/taskPublicId.js";
 
 export const tasksRouter = Router();
 
@@ -64,6 +65,7 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
           OR: [
             { title: { contains: search, mode: "insensitive" } },
             { description: { contains: search, mode: "insensitive" } },
+            { publicId: { contains: search, mode: "insensitive" } },
           ],
         }
       : {}),
@@ -107,9 +109,11 @@ tasksRouter.post("/", async (req: AuthedRequest, res) => {
 
   const lastTask = await prisma.task.findFirst({ orderBy: { taskNumber: "desc" }, select: { taskNumber: true } });
   const taskNumber = (lastTask?.taskNumber ?? 1000000) + 1;
+  const publicId = await generateUniqueTaskPublicId();
 
   const task = await prisma.task.create({
     data: {
+      publicId,
       taskNumber,
       title: body.title,
       description: body.description,
@@ -147,9 +151,8 @@ tasksRouter.get("/meta", async (req: AuthedRequest, res) => {
 
 tasksRouter.get("/:id", async (req: AuthedRequest, res) => {
   const param = z.string().parse(req.params.id);
-  const isNumber = /^\d+$/.test(param);
   const task = await prisma.task.findUnique({
-    where: isNumber ? { taskNumber: Number(param) } : { id: param },
+    where: taskWhereFromParam(param),
     include: {
       createdBy: { select: { id: true, username: true, name: true } },
       assignedTo: { select: { id: true, username: true, name: true } },
@@ -180,7 +183,6 @@ tasksRouter.get("/:id", async (req: AuthedRequest, res) => {
 tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
   try {
   const param = z.string().parse(req.params.id);
-  const isNumber = /^\d+$/.test(param);
   const body = z
     .object({
       title: z.string().min(1).optional(),
@@ -193,7 +195,7 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
     .parse(req.body);
 
   const existing = await prisma.task.findUnique({
-    where: isNumber ? { taskNumber: Number(param) } : { id: param },
+    where: taskWhereFromParam(param),
     select: {
       id: true,
       processId: true,
@@ -338,11 +340,10 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
 
 tasksRouter.post("/:id/comments", async (req: AuthedRequest, res) => {
   const param = z.string().parse(req.params.id);
-  const isNumber = /^\d+$/.test(param);
   const body = z.object({ body: z.string().min(1) }).parse(req.body);
 
   const task = await prisma.task.findUnique({
-    where: isNumber ? { taskNumber: Number(param) } : { id: param },
+    where: taskWhereFromParam(param),
     select: { id: true, processId: true },
   });
   if (!task) return res.status(404).json({ error: "Not found" });

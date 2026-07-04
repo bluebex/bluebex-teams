@@ -6,7 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { TaskPublicId } from "@/components/TaskPublicId";
 import { TASK_STATUS_OPTIONS, type TaskStatus } from "@/lib/taskStatus";
+import { taskPath } from "@/lib/taskPublicId";
 import { TASK_PRIORITY_OPTIONS, type TaskPriority } from "@/lib/taskPriority";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -16,7 +18,7 @@ type ProjectMeta = { id: string; name: string; processes: { id: string; name: st
 type CurrentUser = UserLite & { role: "ADMIN" | "USER" };
 type TaskLite = {
   id: string;
-  taskNumber: number;
+  publicId: string;
   title: string;
   status: TaskStatus;
   priority: TaskPriority;
@@ -215,6 +217,7 @@ function HomeContent() {
             <table className="bb-admin-table">
               <thead>
                 <tr>
+                  <th>ID</th>
                   <th>Task</th>
                   <th>Project</th>
                   <th>Priority</th>
@@ -226,7 +229,7 @@ function HomeContent() {
               <tbody>
                 {filteredTasks.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="bb-admin-cell-empty">
+                    <td colSpan={7} className="bb-admin-cell-empty">
                       {status || assignedToId || projectId || search.trim() || view
                         ? "No tasks match your filters."
                         : "No tasks yet."}{" "}
@@ -239,7 +242,10 @@ function HomeContent() {
                   filteredTasks.map((t) => (
                     <tr key={t.id}>
                       <td>
-                        <Link href={`/tasks/${t.taskNumber}`} className="bb-admin-cell-primary hover:underline">
+                        <TaskPublicId publicId={t.publicId} inline />
+                      </td>
+                      <td>
+                        <Link href={taskPath(t.publicId)} className="bb-admin-cell-primary hover:underline">
                           {t.title}
                         </Link>
                         <span className="bb-admin-cell-sub">
