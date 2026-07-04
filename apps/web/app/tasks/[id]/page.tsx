@@ -271,7 +271,7 @@ export default function TaskPage() {
             </div>
             <div className="bb-admin-list-box-body" style={{ paddingTop: "1rem", paddingBottom: "1.25rem" }}>
               {editingDesc ? (
-                <div className="mb-4">
+                <div>
                   <textarea
                     className="bb-textarea w-full"
                     rows={4}
@@ -295,7 +295,7 @@ export default function TaskPage() {
                 </div>
               ) : (
                 <p
-                  className="text-sm leading-relaxed mb-4 bb-editable-text"
+                  className="text-sm leading-relaxed bb-editable-text"
                   onClick={() => {
                     setEditDesc(task.description ?? "");
                     setEditingDesc(true);
@@ -305,6 +305,7 @@ export default function TaskPage() {
                   {task.description || "No description — click to add one."}
                 </p>
               )}
+              <div className="mt-10" />
               <div className="grid sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <div className="bb-admin-label">Created</div>
