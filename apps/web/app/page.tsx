@@ -114,7 +114,7 @@ function HomeContent() {
 
   const filteredTasks = useMemo(() => {
     if (!currentUser) return tasks;
-    if (view === "assigned") return tasks.filter((t) => t.assignedTo?.id === currentUser.id);
+    if (view === "assigned") return tasks.filter((t) => t.assignedTo?.id === currentUser.id && t.status !== "DONE");
     if (view === "created") return tasks.filter((t) => t.createdBy.id === currentUser.id);
     return tasks;
   }, [tasks, currentUser, view]);
