@@ -110,9 +110,15 @@ export default function NewTaskPage() {
                 <select
                   className="bb-select"
                   value={newTask.projectId}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, projectId: e.target.value, processId: "" })
-                  }
+                  onChange={(e) => {
+                    const pid = e.target.value;
+                    const procs = projects.find((p) => p.id === pid)?.processes ?? [];
+                    setNewTask({
+                      ...newTask,
+                      projectId: pid,
+                      processId: procs.length === 1 ? procs[0].id : "",
+                    });
+                  }}
                 >
                   <option value="">Select project</option>
                   {projects.map((p) => (
