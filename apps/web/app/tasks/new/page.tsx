@@ -3,6 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
+import { DatePicker } from "@/components/DatePicker";
+import { TASK_PRIORITY_OPTIONS, parseTaskPriority, type TaskPriority } from "@/lib/taskPriority";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -22,6 +24,7 @@ function NewTaskContent() {
   const searchParams = useSearchParams();
   const preProjectId = searchParams.get("projectId") ?? "";
   const preProcessId = searchParams.get("processId") ?? "";
+  const prePriority = parseTaskPriority(searchParams.get("priority"));
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +37,8 @@ function NewTaskContent() {
     title: "",
     description: "",
     assignedToId: "",
+    priority: "P1" as TaskPriority,
+    eta: "",
   });
 
   const newTaskProcesses = useMemo(() => {
@@ -57,10 +62,15 @@ function NewTaskContent() {
           : proj.processes.length === 1
             ? proj.processes[0].id
             : "";
-        setNewTask((prev) => ({ ...prev, projectId: preProjectId, processId: autoProcessId }));
+        setNewTask((prev) => ({
+          ...prev,
+          projectId: preProjectId,
+          processId: autoProcessId,
+          ...(prePriority ? { priority: prePriority } : {}),
+        }));
       }
     }
-  }, [preProjectId, preProcessId]);
+  }, [preProjectId, preProcessId, prePriority]);
 
   useEffect(() => {
     (async () => {
@@ -92,6 +102,8 @@ function NewTaskContent() {
           description: newTask.description || undefined,
           processId: newTask.processId,
           assignedToId: newTask.assignedToId || undefined,
+          priority: newTask.priority,
+          ...(newTask.eta ? { eta: newTask.eta } : {}),
         }),
       });
       if (!res.ok) {
@@ -192,6 +204,32 @@ function NewTaskContent() {
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                   placeholder="Add more details…"
+                />
+              </label>
+
+              <label className="block text-sm">
+                <span className="bb-admin-label">Priority</span>
+                <select
+                  className="bb-select"
+                  value={newTask.priority}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, priority: e.target.value as TaskPriority })
+                  }
+                >
+                  {TASK_PRIORITY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm">
+                <span className="bb-admin-label">ETA (optional)</span>
+                <DatePicker
+                  value={newTask.eta}
+                  placeholder="Pick a date"
+                  onChange={(next) => setNewTask({ ...newTask, eta: next ?? "" })}
                 />
               </label>
 

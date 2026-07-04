@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PriorityBadge } from "@/components/PriorityBadge";
 import { TASK_STATUS_OPTIONS, type TaskStatus } from "@/lib/taskStatus";
+import { TASK_PRIORITY_OPTIONS, type TaskPriority } from "@/lib/taskPriority";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -17,6 +19,7 @@ type TaskLite = {
   taskNumber: number;
   title: string;
   status: TaskStatus;
+  priority: TaskPriority;
   updatedAt: string;
   assignedTo: UserLite | null;
   createdBy: UserLite;
@@ -214,6 +217,7 @@ function HomeContent() {
                 <tr>
                   <th>Task</th>
                   <th>Project</th>
+                  <th>Priority</th>
                   <th>Assignee</th>
                   <th>Status</th>
                   <th>Updated</th>
@@ -222,7 +226,7 @@ function HomeContent() {
               <tbody>
                 {filteredTasks.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="bb-admin-cell-empty">
+                    <td colSpan={6} className="bb-admin-cell-empty">
                       {status || assignedToId || projectId || search.trim() || view
                         ? "No tasks match your filters."
                         : "No tasks yet."}{" "}
@@ -245,6 +249,9 @@ function HomeContent() {
                       <td>
                         <span className="bb-admin-cell-primary">{t.project.name}</span>
                         <span className="bb-admin-cell-sub">{t.process.name}</span>
+                      </td>
+                      <td>
+                        <PriorityBadge priority={t.priority} />
                       </td>
                       <td className="bb-admin-cell-secondary">
                         {t.assignedTo ? t.assignedTo.name : "Unassigned"}

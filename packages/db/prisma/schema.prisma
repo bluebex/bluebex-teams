@@ -18,6 +18,12 @@ enum TaskStatus {
   DONE
 }
 
+enum TaskPriority {
+  P0
+  P1
+  P2
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -108,7 +114,9 @@ model Task {
   taskNumber   Int        @unique
   title        String
   description  String?
-  status       TaskStatus @default(TODO)
+  status       TaskStatus   @default(TODO)
+  priority     TaskPriority @default(P1)
+  eta          DateTime?    @db.Date
 
   projectId    String
   processId    String

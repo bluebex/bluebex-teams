@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AdminModal } from "@/components/AdminModal";
 import { AdminIconButton, DeleteIcon, EditIcon } from "@/components/AdminIconButton";
+import { PriorityBadge } from "@/components/PriorityBadge";
+import type { TaskPriority } from "@/lib/taskPriority";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -59,6 +61,7 @@ type Task = {
   taskNumber: number;
   title: string;
   status: "TODO" | "IN_PROGRESS" | "DONE";
+  priority: TaskPriority;
   createdAt: string;
   createdBy: { id: string; name: string; username: string };
   assignedTo: { id: string; name: string; username: string } | null;
@@ -400,6 +403,7 @@ export default function ProjectDetailPage() {
                 <tr>
                   <th>#</th>
                   <th>Title</th>
+                  <th>Priority</th>
                   <th>Status</th>
                   <th>Process</th>
                   <th>Assigned to</th>
@@ -411,7 +415,7 @@ export default function ProjectDetailPage() {
               <tbody>
                 {tasks.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="bb-admin-cell-empty">
+                    <td colSpan={9} className="bb-admin-cell-empty">
                       No tasks yet.
                     </td>
                   </tr>
@@ -420,6 +424,9 @@ export default function ProjectDetailPage() {
                     <tr key={t.id}>
                       <td className="bb-admin-cell-secondary">{t.taskNumber}</td>
                       <td className="bb-admin-cell-primary">{t.title}</td>
+                      <td>
+                        <PriorityBadge priority={t.priority} />
+                      </td>
                       <td>
                         <span className="bb-admin-badge">
                           {t.status === "IN_PROGRESS" ? "In Progress" : t.status === "TODO" ? "To Do" : "Done"}

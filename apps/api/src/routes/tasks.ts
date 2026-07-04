@@ -15,7 +15,29 @@ async function assigneeLabel(userId: string | null | undefined) {
   return user?.name ?? "Unknown";
 }
 
+function etaToStored(value: string) {
+  return new Date(`${value}T12:00:00.000Z`);
+}
+
+function etaToLogValue(value: Date | null | undefined) {
+  if (!value) return null;
+  return value.toISOString().slice(0, 10);
+}
+
+function etaTodayString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isEtaBeforeToday(eta: string) {
+  return eta < etaTodayString();
+}
+
 tasksRouter.get("/", async (req: AuthedRequest, res) => {
+  try {
   const processIds = await accessibleProcessIds(req.user!.id);
   if (processIds.length === 0) return res.json({ tasks: [] });
 
@@ -58,6 +80,10 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
     },
   });
   res.json({ tasks });
+  } catch (err) {
+    console.error("GET /tasks failed:", err);
+    return res.status(500).json({ error: "Failed to load tasks" });
+  }
 });
 
 tasksRouter.post("/", async (req: AuthedRequest, res) => {
@@ -67,11 +93,17 @@ tasksRouter.post("/", async (req: AuthedRequest, res) => {
       description: z.string().optional(),
       processId: z.string().min(1),
       assignedToId: z.string().optional(),
+      priority: z.enum(["P0", "P1", "P2"]).optional(),
+      eta: z.string().date().optional(),
     })
     .parse(req.body);
 
   const access = await canAccessProcess(req.user!.id, body.processId);
   if (!access.ok) return res.status(403).json({ error: access.reason });
+
+  if (body.eta && isEtaBeforeToday(body.eta)) {
+    return res.status(400).json({ error: "ETA cannot be before today" });
+  }
 
   const lastTask = await prisma.task.findFirst({ orderBy: { taskNumber: "desc" }, select: { taskNumber: true } });
   const taskNumber = (lastTask?.taskNumber ?? 1000000) + 1;
@@ -85,6 +117,8 @@ tasksRouter.post("/", async (req: AuthedRequest, res) => {
       projectId: access.projectId,
       createdById: req.user!.id,
       assignedToId: body.assignedToId,
+      priority: body.priority ?? "P1",
+      ...(body.eta ? { eta: etaToStored(body.eta) } : {}),
       status: "TODO",
       statusLogs: { create: { userId: req.user!.id, fromStatus: null, toStatus: "TODO" } },
     },
@@ -144,6 +178,7 @@ tasksRouter.get("/:id", async (req: AuthedRequest, res) => {
 });
 
 tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
+  try {
   const param = z.string().parse(req.params.id);
   const isNumber = /^\d+$/.test(param);
   const body = z
@@ -152,6 +187,8 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
       description: z.string().optional(),
       assignedToId: z.string().nullable().optional(),
       status: z.enum(["TODO", "IN_PROGRESS", "DONE"]).optional(),
+      priority: z.enum(["P0", "P1", "P2"]).optional(),
+      eta: z.union([z.string().date(), z.null()]).optional(),
     })
     .parse(req.body);
 
@@ -161,6 +198,8 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
       id: true,
       processId: true,
       status: true,
+      priority: true,
+      eta: true,
       title: true,
       description: true,
       assignedToId: true,
@@ -170,6 +209,10 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
   if (!existing) return res.status(404).json({ error: "Not found" });
   const id = existing.id;
 
+  if (body.eta && isEtaBeforeToday(body.eta)) {
+    return res.status(400).json({ error: "ETA cannot be before today" });
+  }
+
   const processIds = await accessibleProcessIds(req.user!.id);
   if (!processIds.includes(existing.processId)) return res.status(403).json({ error: "No access" });
 
@@ -177,6 +220,8 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
     ...(body.title ? { title: body.title } : {}),
     ...(body.description !== undefined ? { description: body.description } : {}),
     ...(body.assignedToId !== undefined ? { assignedToId: body.assignedToId } : {}),
+    ...(body.priority ? { priority: body.priority } : {}),
+    ...(body.eta !== undefined ? { eta: body.eta ? etaToStored(body.eta) : null } : {}),
   };
 
   const tx: Prisma.PrismaPromise<unknown>[] = [];
@@ -230,6 +275,38 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
     );
   }
 
+  if (body.priority && body.priority !== existing.priority) {
+    tx.push(
+      prisma.taskChangeLog.create({
+        data: {
+          taskId: id,
+          userId: req.user!.id,
+          field: "priority",
+          fromValue: existing.priority,
+          toValue: body.priority,
+        },
+      }),
+    );
+  }
+
+  if (body.eta !== undefined) {
+    const fromEta = etaToLogValue(existing.eta);
+    const toEta = body.eta;
+    if (fromEta !== toEta) {
+      tx.push(
+        prisma.taskChangeLog.create({
+          data: {
+            taskId: id,
+            userId: req.user!.id,
+            field: "eta",
+            fromValue: fromEta,
+            toValue: toEta,
+          },
+        }),
+      );
+    }
+  }
+
   if (body.status && body.status !== existing.status) {
     tx.push(
       prisma.taskStatusLog.create({
@@ -250,6 +327,13 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
     },
   });
   res.json({ task });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.issues[0]?.message ?? "Invalid request" });
+    }
+    console.error("PATCH /tasks/:id failed:", err);
+    return res.status(500).json({ error: "Failed to update task" });
+  }
 });
 
 tasksRouter.post("/:id/comments", async (req: AuthedRequest, res) => {

@@ -5,13 +5,21 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PriorityBadge } from "@/components/PriorityBadge";
 import { CommentBody } from "@/components/CommentBody";
 import { CommentMentionInput } from "@/components/CommentMentionInput";
+import { DatePicker } from "@/components/DatePicker";
 import {
   formatTaskStatusLogLabel,
   TASK_STATUS_OPTIONS,
   type TaskStatus,
 } from "@/lib/taskStatus";
+import {
+  formatTaskPriorityLogLabel,
+  TASK_PRIORITY_OPTIONS,
+  type TaskPriority,
+} from "@/lib/taskPriority";
+import { formatTaskEtaLogLabel, toDateInputValue } from "@/lib/taskEta";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -22,6 +30,8 @@ type Task = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
+  eta: string | null;
   createdAt: string;
   updatedAt: string;
   createdBy: UserLite;
@@ -69,6 +79,8 @@ export default function TaskPage() {
   const [users, setUsers] = useState<UserLite[]>([]);
   const [comment, setComment] = useState("");
   const [status, setStatus] = useState<TaskStatus>("TODO");
+  const [priority, setPriority] = useState<TaskPriority>("P1");
+  const [eta, setEta] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
@@ -89,6 +101,8 @@ export default function TaskPage() {
       const taskData = await taskRes.json();
       setTask(taskData.task);
       setStatus(taskData.task.status);
+      setPriority(taskData.task.priority);
+      setEta(toDateInputValue(taskData.task.eta));
       if (metaRes.ok) {
         const metaData = await metaRes.json();
         setUsers(metaData.users || []);
@@ -159,6 +173,35 @@ export default function TaskPage() {
     await refresh();
   }
 
+  async function updatePriority(next: TaskPriority) {
+    await fetch(`${API_URL}/tasks/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priority: next }),
+    });
+    await refresh();
+  }
+
+  async function updateEta(next: string | null) {
+    const previous = eta;
+    setEta(next ?? "");
+    const res = await fetch(`${API_URL}/tasks/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eta: next }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setEta(previous);
+      setError(data?.error || "Failed to update ETA");
+      return;
+    }
+    setError(null);
+    await refresh();
+  }
+
   const activity = useMemo(() => {
     if (!task) return [];
 
@@ -179,7 +222,13 @@ export default function TaskPage() {
         toStatus: l.toStatus,
       })),
       ...task.changeLogs
-        .filter((l) => l.field === "title" || l.field === "description")
+        .filter(
+          (l) =>
+            l.field === "title" ||
+            l.field === "description" ||
+            l.field === "priority" ||
+            l.field === "eta",
+        )
         .map((l) => ({
           kind: "change" as const,
           id: l.id,
@@ -202,7 +251,7 @@ export default function TaskPage() {
         {task ? (
           <div className="flex items-center gap-4 flex-wrap" style={{ width: "100%" }}>
             <Link
-              href={`/tasks/new?projectId=${task.project.id}&processId=${task.process.id}`}
+              href={`/tasks/new?projectId=${task.project.id}&processId=${task.process.id}&priority=${task.priority}`}
               className="bb-admin-btn bb-admin-btn-outline"
               style={{ marginRight: "auto" }}
             >
@@ -301,6 +350,7 @@ export default function TaskPage() {
                 <span className="bb-task-number">#{task.taskNumber}</span>
               </div>
               <StatusBadge status={task.status} assignedTo={task.assignedTo} />
+              <PriorityBadge priority={task.priority} />
             </div>
             <div className="bb-admin-list-box-body" style={{ paddingTop: "1rem", paddingBottom: "1.25rem" }}>
               {editingDesc ? (
@@ -362,7 +412,43 @@ export default function TaskPage() {
             </div>
           </div>
 
-          <div className="bb-admin-list-box bb-task-comments-box">
+          <div className="bb-task-comments-section">
+            <div className="bb-task-inline-actions">
+              <div className="flex items-center gap-4 flex-wrap justify-end" style={{ width: "100%" }}>
+                <div className="flex items-center gap-2">
+                  <span className="bb-admin-label">Priority</span>
+                  <select
+                    className="bb-select bb-select--inline"
+                    value={priority}
+                    onChange={(e) => {
+                      const next = e.target.value as TaskPriority;
+                      setPriority(next);
+                      updatePriority(next);
+                    }}
+                  >
+                    {TASK_PRIORITY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="bb-admin-label">ETA</span>
+                  <DatePicker
+                    inline
+                    value={eta}
+                    placeholder="Set ETA"
+                    onChange={(next) => {
+                      setEta(next ?? "");
+                      updateEta(next);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bb-admin-list-box bb-task-comments-box">
             <div className="bb-admin-list-box-header">
               <h2 className="bb-admin-list-box-title">Comments</h2>
               <span className="bb-admin-label">{activity.length} total</span>
@@ -383,6 +469,16 @@ export default function TaskPage() {
                       <p className="text-sm bb-admin-cell-secondary">
                         {formatTaskStatusLogLabel(item.fromStatus)} →{" "}
                         {formatTaskStatusLogLabel(item.toStatus)}
+                      </p>
+                    ) : item.field === "priority" ? (
+                      <p className="text-sm bb-admin-cell-secondary">
+                        {formatTaskPriorityLogLabel(item.fromValue)} →{" "}
+                        {formatTaskPriorityLogLabel(item.toValue)}
+                      </p>
+                    ) : item.field === "eta" ? (
+                      <p className="text-sm bb-admin-cell-secondary">
+                        {formatTaskEtaLogLabel(item.fromValue)} →{" "}
+                        {formatTaskEtaLogLabel(item.toValue)}
                       </p>
                     ) : (
                       <p className="text-sm bb-admin-cell-secondary">
@@ -409,6 +505,7 @@ export default function TaskPage() {
                 </button>
               </div>
             </div>
+          </div>
           </div>
         </>
       ) : (
