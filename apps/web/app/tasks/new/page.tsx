@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -10,7 +10,18 @@ type UserLite = { id: string; username: string; name: string };
 type ProjectOption = { id: string; name: string; processes: { id: string; name: string }[] };
 
 export default function NewTaskPage() {
+  return (
+    <Suspense>
+      <NewTaskContent />
+    </Suspense>
+  );
+}
+
+function NewTaskContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preProjectId = searchParams.get("projectId") ?? "";
+  const preProcessId = searchParams.get("processId") ?? "";
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +46,21 @@ export default function NewTaskPage() {
     if (res.status === 401) return (window.location.href = "/login");
     if (!res.ok) throw new Error("Failed to load task options");
     const data = await res.json();
-    setProjects(data.projects || []);
+    const loadedProjects: ProjectOption[] = data.projects || [];
+    setProjects(loadedProjects);
     setUsers(data.users || []);
-  }, []);
+    if (preProjectId) {
+      const proj = loadedProjects.find((p) => p.id === preProjectId);
+      if (proj) {
+        const autoProcessId = preProcessId && proj.processes.some((pr) => pr.id === preProcessId)
+          ? preProcessId
+          : proj.processes.length === 1
+            ? proj.processes[0].id
+            : "";
+        setNewTask((prev) => ({ ...prev, projectId: preProjectId, processId: autoProcessId }));
+      }
+    }
+  }, [preProjectId, preProcessId]);
 
   useEffect(() => {
     (async () => {

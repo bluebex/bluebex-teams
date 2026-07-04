@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CommentBody } from "@/components/CommentBody";
@@ -175,6 +176,12 @@ export default function TaskPage() {
       <PageHeader title={task?.title ?? "Task"} backHref="/" backLabel="← Back to tasks">
         {task ? (
           <div className="flex items-center gap-4 flex-wrap">
+            <Link
+              href={`/tasks/new?projectId=${task.project.id}&processId=${task.process.id}`}
+              className="bb-admin-btn bb-admin-btn-outline"
+            >
+              Create similar task
+            </Link>
             <div className="flex items-center gap-2">
               <span className="bb-admin-label">Assign to</span>
               <select
