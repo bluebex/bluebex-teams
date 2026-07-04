@@ -126,20 +126,69 @@ adminRouter.delete("/users/:userId", async (req: AuthedRequest, res) => {
 adminRouter.get("/projects", async (_req, res) => {
   const projects = await prisma.project.findMany({
     orderBy: { createdAt: "desc" },
-    include: { processes: { orderBy: { name: "asc" } } },
+    include: {
+      processes: { orderBy: { name: "asc" } },
+      members: { include: { user: { select: { id: true, name: true, username: true } } } },
+      _count: { select: { tasks: true } },
+    },
   });
   res.json({ projects });
 });
 
 adminRouter.post("/projects", async (req, res) => {
-  const body = z.object({ name: z.string().min(2) }).parse(req.body);
-  const project = await prisma.project.create({ data: { name: body.name } });
+  const body = z.object({
+    name: z.string().min(2),
+    description: z.string().optional(),
+    memberIds: z.array(z.string()).optional(),
+  }).parse(req.body);
+
+  const project = await prisma.$transaction(async (tx: any) => {
+    const p = await tx.project.create({
+      data: { name: body.name, description: body.description },
+    });
+    if (body.memberIds?.length) {
+      await tx.projectMember.createMany({
+        data: body.memberIds.map((userId: string) => ({ projectId: p.id, userId })),
+        skipDuplicates: true,
+      });
+    }
+    return tx.project.findUnique({
+      where: { id: p.id },
+      include: {
+        processes: { orderBy: { name: "asc" } },
+        members: { include: { user: { select: { id: true, name: true, username: true } } } },
+      },
+    });
+  });
+  res.json({ project });
+});
+
+adminRouter.get("/projects/:projectId", async (req, res) => {
+  const projectId = z.string().parse(req.params.projectId);
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      processes: {
+        orderBy: { name: "asc" },
+        include: {
+          members: { include: { user: { select: { id: true, name: true, username: true } } } },
+          _count: { select: { tasks: true } },
+        },
+      },
+      members: { include: { user: { select: { id: true, name: true, username: true } } } },
+      _count: { select: { tasks: true } },
+    },
+  });
+  if (!project) return res.status(404).json({ error: "Project not found" });
   res.json({ project });
 });
 
 adminRouter.patch("/projects/:projectId", async (req, res) => {
   const projectId = z.string().parse(req.params.projectId);
-  const body = z.object({ name: z.string().min(2) }).parse(req.body);
+  const body = z.object({
+    name: z.string().min(2).optional(),
+    description: z.string().nullable().optional(),
+  }).parse(req.body);
 
   const existing = await prisma.project.findUnique({ where: { id: projectId } });
   if (!existing) return res.status(404).json({ error: "Project not found" });
@@ -147,7 +196,14 @@ adminRouter.patch("/projects/:projectId", async (req, res) => {
   try {
     const project = await prisma.project.update({
       where: { id: projectId },
-      data: { name: body.name },
+      data: {
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+      },
+      include: {
+        processes: { orderBy: { name: "asc" } },
+        members: { include: { user: { select: { id: true, name: true, username: true } } } },
+      },
     });
     return res.json({ project });
   } catch (e) {
@@ -392,6 +448,33 @@ adminRouter.delete("/memberships/process/:processId/users/:userId", async (req, 
   await prisma.processMember.delete({
     where: { processId_userId: { processId, userId } },
   });
+  res.json({ ok: true });
+});
+
+adminRouter.get("/projects/:projectId/tasks", async (req, res) => {
+  const projectId = z.string().parse(req.params.projectId);
+  const tasks = await prisma.task.findMany({
+    where: { projectId },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      createdBy: { select: { id: true, username: true, name: true } },
+      assignedTo: { select: { id: true, username: true, name: true } },
+      process: { select: { id: true, name: true } },
+    },
+  });
+  res.json({ tasks });
+});
+
+adminRouter.delete("/tasks/:taskId", async (req, res) => {
+  const taskId = z.string().parse(req.params.taskId);
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) return res.status(404).json({ error: "Task not found" });
+
+  await prisma.$transaction([
+    prisma.comment.deleteMany({ where: { taskId } }),
+    prisma.taskStatusLog.deleteMany({ where: { taskId } }),
+    prisma.task.delete({ where: { id: taskId } }),
+  ]);
   res.json({ ok: true });
 });
 

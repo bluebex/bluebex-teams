@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AdminModal } from "@/components/AdminModal";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { TASK_STATUS_LABELS, TASK_STATUS_OPTIONS, type TaskStatus } from "@/lib/taskStatus";
+import { TASK_STATUS_OPTIONS, type TaskStatus } from "@/lib/taskStatus";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -34,7 +34,15 @@ function formatDate(value: string) {
   });
 }
 
+const VIEW_TITLES: Record<string, string> = {
+  assigned: "Assigned to me",
+  created: "Created by me",
+};
+
 export default function Home() {
+  const searchParams = useSearchParams();
+  const view = searchParams.get("view") ?? "";
+
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [tasks, setTasks] = useState<TaskLite[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
@@ -44,8 +52,6 @@ export default function Home() {
   const [projectId, setProjectId] = useState("");
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
 
   const qs = useMemo(() => {
     const p = new URLSearchParams();
@@ -98,67 +104,29 @@ export default function Home() {
     };
   }, [loadCurrentUser, loadTasks, loadUsers]);
 
-  async function handleLogout() {
-    setLoggingOut(true);
-    try {
-      await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
-      window.location.href = "/login";
-    } finally {
-      setLoggingOut(false);
-    }
-  }
+  const filteredTasks = useMemo(() => {
+    if (!currentUser) return tasks;
+    if (view === "assigned") return tasks.filter((t) => t.assignedTo?.id === currentUser.id);
+    if (view === "created") return tasks.filter((t) => t.createdBy.id === currentUser.id);
+    return tasks;
+  }, [tasks, currentUser, view]);
+
+  const pageTitle = VIEW_TITLES[view] ?? "Tasks";
+  const pageSubtitle = view === "assigned"
+    ? "Tasks currently assigned to you."
+    : view === "created"
+      ? "Tasks you have created."
+      : currentUser
+        ? `Welcome, ${currentUser.name}. View and manage your work.`
+        : "View and manage your tasks.";
 
   return (
     <>
-      <AdminModal
-        open={showLogoutConfirm}
-        title="Log out?"
-        description="Are you sure you want to log out?"
-        onClose={() => setShowLogoutConfirm(false)}
-        footer={
-          <>
-            <button
-              type="button"
-              className="bb-admin-btn bb-admin-btn-outline"
-              disabled={loggingOut}
-              onClick={() => setShowLogoutConfirm(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="bb-admin-btn"
-              disabled={loggingOut}
-              onClick={handleLogout}
-            >
-              {loggingOut ? "Logging out…" : "Log out"}
-            </button>
-          </>
-        }
-      >
-        <p className="text-sm opacity-70">You will need to sign in again to continue.</p>
-      </AdminModal>
-
       <main className="bb-container bb-page space-y-8">
-        <PageHeader
-          title="Tasks"
-          subtitle={
-            currentUser
-              ? `Welcome, ${currentUser.name}. View and manage your work.`
-              : "View and manage your tasks."
-          }
-        >
+        <PageHeader title={pageTitle} subtitle={pageSubtitle}>
           <Link className="bb-admin-btn" href="/tasks/new">
             Create task
           </Link>
-          {currentUser?.role === "ADMIN" ? (
-            <Link className="bb-text-link" href="/admin">
-              Admin
-            </Link>
-          ) : null}
-          <button type="button" className="bb-text-link" onClick={() => setShowLogoutConfirm(true)}>
-            Logout
-          </button>
         </PageHeader>
 
         {error ? <div className="bb-alert-error">{error}</div> : null}
@@ -166,7 +134,7 @@ export default function Home() {
         <div className="bb-admin-list-box">
           <div className="bb-admin-list-box-header">
             <h2 className="bb-admin-list-box-title">Task list</h2>
-            <span className="bb-admin-label">{tasks.length} total</span>
+            <span className="bb-admin-label">{filteredTasks.length} total</span>
           </div>
 
           <div className="bb-task-filters">
@@ -244,10 +212,10 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {tasks.length === 0 ? (
+                {filteredTasks.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="bb-admin-cell-empty">
-                      {status || assignedToId || projectId || search.trim()
+                      {status || assignedToId || projectId || search.trim() || view
                         ? "No tasks match your filters."
                         : "No tasks yet."}{" "}
                       <Link className="bb-text-link" href="/tasks/new">
@@ -256,7 +224,7 @@ export default function Home() {
                     </td>
                   </tr>
                 ) : (
-                  tasks.map((t) => (
+                  filteredTasks.map((t) => (
                     <tr key={t.id}>
                       <td>
                         <Link href={`/tasks/${t.taskNumber}`} className="bb-admin-cell-primary hover:underline">
