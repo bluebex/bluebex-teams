@@ -97,6 +97,7 @@ tasksRouter.get("/meta", async (req: AuthedRequest, res) => {
   const [projects, users] = await Promise.all([
     accessibleProjectsWithProcesses(req.user!.id),
     prisma.user.findMany({
+      where: { role: "USER" },
       orderBy: { name: "asc" },
       select: { id: true, username: true, name: true },
     }),
