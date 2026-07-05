@@ -1,9 +1,10 @@
-export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "INFEASIBLE";
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "To do",
   IN_PROGRESS: "In progress",
   DONE: "Done",
+  INFEASIBLE: "Infeasible",
 };
 
 export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = (
@@ -25,7 +26,6 @@ export function formatTaskStatusLabel(
 /** Legacy status values kept for old log rows after enum migrations. */
 const LEGACY_STATUS_LABELS: Record<string, string> = {
   BLOCKED: "Done",
-  INFEASIBLE: "Done",
 };
 
 export function formatTaskStatusLogLabel(status: string | null): string {

@@ -8,6 +8,7 @@ export default function BugsPage() {
     <Suspense>
       <TaskListView
         fixedCategory="BUG"
+        defaultSelectedStatuses={["TODO", "IN_PROGRESS"]}
         listTitle="Bug list"
         createHref="/tasks/new?category=BUG"
         createLabel="Create bug"

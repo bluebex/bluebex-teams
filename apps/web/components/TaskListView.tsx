@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { Pagination } from "@/components/Pagination";
+import { MultiSelect } from "@/components/MultiSelect";
 import { TASK_STATUS_OPTIONS, type TaskStatus } from "@/lib/taskStatus";
 import { taskPath } from "@/lib/taskPublicId";
 import { type TaskPriority } from "@/lib/taskPriority";
@@ -48,6 +49,8 @@ export type TaskListViewProps = {
   itemLabel?: string;
   emptyLabel?: string;
   errorMessage?: string;
+  /** When set, only tasks with these statuses are shown. Empty = no status filter. */
+  defaultSelectedStatuses?: TaskStatus[];
 };
 
 const VIEW_TITLES: Record<string, string> = {
@@ -75,6 +78,7 @@ export function TaskListView({
   itemLabel = "Task",
   emptyLabel = "tasks",
   errorMessage = "Failed to load tasks",
+  defaultSelectedStatuses = [],
 }: TaskListViewProps) {
   const searchParams = useSearchParams();
   const view = fixedCategory ? "" : (searchParams.get("view") ?? "");
@@ -83,7 +87,7 @@ export function TaskListView({
   const [tasks, setTasks] = useState<TaskLite[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
-  const [status, setStatus] = useState<TaskStatus | "">("");
+  const [selectedStatuses, setSelectedStatuses] = useState<TaskStatus[]>(defaultSelectedStatuses);
   const [assignedToId, setAssignedToId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [search, setSearch] = useState("");
@@ -100,14 +104,19 @@ export function TaskListView({
     const p = new URLSearchParams();
     if (view) p.set("view", view);
     if (fixedCategory) p.set("category", fixedCategory);
-    if (status) p.set("status", status);
+    if (
+      selectedStatuses.length > 0 &&
+      selectedStatuses.length < TASK_STATUS_OPTIONS.length
+    ) {
+      p.set("statusIn", selectedStatuses.join(","));
+    }
     if (assignedToId) p.set("assignedToId", assignedToId);
     if (projectId) p.set("projectId", projectId);
     if (search.trim()) p.set("search", search.trim());
     p.set("page", String(page));
     p.set("pageSize", String(TASKS_PAGE_SIZE));
     return `?${p.toString()}`;
-  }, [view, fixedCategory, status, assignedToId, projectId, search, page]);
+  }, [view, fixedCategory, selectedStatuses, assignedToId, projectId, search, page]);
 
   const loadCurrentUser = useCallback(async () => {
     const res = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
@@ -173,7 +182,18 @@ export function TaskListView({
             ? `Welcome, ${currentUser.name}. View and manage your work.`
             : "View and manage your tasks.");
 
-  const hasFilters = Boolean(status || assignedToId || projectId || search.trim() || view);
+  const isStatusFiltered =
+    selectedStatuses.length > 0 &&
+    selectedStatuses.length < TASK_STATUS_OPTIONS.length;
+
+  const hasFilters = Boolean(
+    isStatusFiltered || assignedToId || projectId || search.trim() || view,
+  );
+
+  const handleStatusChange = (statuses: TaskStatus[]) => {
+    setSelectedStatuses(statuses);
+    setPage(1);
+  };
 
   return (
     <main className="bb-container bb-page space-y-8">
@@ -207,24 +227,12 @@ export function TaskListView({
           </label>
 
           <div className="bb-task-filter-row">
-            <label className="bb-task-filter-field">
-              <span className="bb-admin-label">Status</span>
-              <select
-                className="bb-select"
-                value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value as TaskStatus | "");
-                  setPage(1);
-                }}
-              >
-                <option value="">All</option>
-                {TASK_STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <MultiSelect
+              label="Status"
+              options={TASK_STATUS_OPTIONS}
+              value={selectedStatuses}
+              onChange={handleStatusChange}
+            />
 
             <label className="bb-task-filter-field">
               <span className="bb-admin-label">Assignee</span>

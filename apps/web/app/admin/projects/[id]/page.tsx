@@ -8,6 +8,7 @@ import { AdminIconButton, DeleteIcon, EditIcon } from "@/components/AdminIconBut
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { TaskPublicId } from "@/components/TaskPublicId";
 import type { TaskPriority } from "@/lib/taskPriority";
+import { TASK_STATUS_LABELS, type TaskStatus } from "@/lib/taskStatus";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -61,7 +62,7 @@ type Task = {
   id: string;
   publicId: string;
   title: string;
-  status: "TODO" | "IN_PROGRESS" | "DONE";
+  status: TaskStatus;
   priority: TaskPriority;
   createdAt: string;
   createdBy: { id: string; name: string; username: string };
@@ -432,7 +433,7 @@ export default function ProjectDetailPage() {
                       </td>
                       <td>
                         <span className="bb-admin-badge">
-                          {t.status === "IN_PROGRESS" ? "In Progress" : t.status === "TODO" ? "To Do" : "Done"}
+                          {TASK_STATUS_LABELS[t.status]}
                         </span>
                       </td>
                       <td className="bb-admin-cell-secondary">{t.process.name}</td>

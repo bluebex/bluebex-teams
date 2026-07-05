@@ -53,7 +53,8 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
   const query = z
     .object({
       assignedToId: z.string().optional(),
-      status: z.enum(["TODO", "IN_PROGRESS", "DONE"]).optional(),
+      status: z.enum(["TODO", "IN_PROGRESS", "DONE", "INFEASIBLE"]).optional(),
+      statusIn: z.string().optional(),
       processId: z.string().optional(),
       projectId: z.string().optional(),
       search: z.string().optional(),
@@ -70,6 +71,10 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
     .parse(req.query);
 
   const search = query.search?.trim();
+  const taskStatusEnum = z.enum(["TODO", "IN_PROGRESS", "DONE", "INFEASIBLE"]);
+  const statusIn = query.statusIn
+    ? taskStatusEnum.array().parse(query.statusIn.split(",").filter(Boolean))
+    : undefined;
 
   const where: Prisma.TaskWhereInput = {
     processId: { in: processIds },
@@ -92,18 +97,22 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
 
   if (query.view === "assigned") {
     where.assignedToId = req.user!.id;
-    if (!query.status) {
-      where.status = { not: "DONE" };
-    } else {
+    if (query.status) {
       where.status = query.status;
+    } else if (statusIn?.length) {
+      where.status = { in: statusIn };
+    } else {
+      where.status = { notIn: ["DONE", "INFEASIBLE"] };
     }
   } else if (query.view === "created") {
     where.createdById = req.user!.id;
     if (query.status) where.status = query.status;
+    else if (statusIn?.length) where.status = { in: statusIn };
     if (query.assignedToId) where.assignedToId = query.assignedToId;
   } else {
     if (query.assignedToId) where.assignedToId = query.assignedToId;
     if (query.status) where.status = query.status;
+    else if (statusIn?.length) where.status = { in: statusIn };
   }
 
   const total = await prisma.task.count({ where });
@@ -240,7 +249,7 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
       title: z.string().min(1).optional(),
       description: z.string().optional(),
       assignedToId: z.string().nullable().optional(),
-      status: z.enum(["TODO", "IN_PROGRESS", "DONE"]).optional(),
+      status: z.enum(["TODO", "IN_PROGRESS", "DONE", "INFEASIBLE"]).optional(),
       priority: z.enum(["P0", "P1", "P2"]).optional(),
       category: z.enum(["TASK", "BUG"]).optional(),
       eta: z.union([z.string().date(), z.null()]).optional(),
