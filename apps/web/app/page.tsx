@@ -6,11 +6,13 @@ import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { Pagination } from "@/components/Pagination";
 import { TASK_STATUS_OPTIONS, type TaskStatus } from "@/lib/taskStatus";
 import { taskPath } from "@/lib/taskPublicId";
 import { TASK_PRIORITY_OPTIONS, type TaskPriority } from "@/lib/taskPriority";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const TASKS_PAGE_SIZE = 20;
 
 type UserLite = { id: string; username: string; name: string };
 type ProjectMeta = { id: string; name: string; processes: { id: string; name: string }[] };
@@ -26,6 +28,13 @@ type TaskLite = {
   createdBy: UserLite;
   project: { id: string; name: string };
   process: { id: string; name: string };
+};
+
+type TaskPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 };
 
 function formatDate(value: string) {
@@ -63,17 +72,26 @@ function HomeContent() {
   const [assignedToId, setAssignedToId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<TaskPagination>({
+    page: 1,
+    pageSize: TASKS_PAGE_SIZE,
+    total: 0,
+    totalPages: 1,
+  });
   const [error, setError] = useState<string | null>(null);
 
   const qs = useMemo(() => {
     const p = new URLSearchParams();
+    if (view) p.set("view", view);
     if (status) p.set("status", status);
     if (assignedToId) p.set("assignedToId", assignedToId);
     if (projectId) p.set("projectId", projectId);
     if (search.trim()) p.set("search", search.trim());
-    const s = p.toString();
-    return s ? `?${s}` : "";
-  }, [status, assignedToId, projectId, search]);
+    p.set("page", String(page));
+    p.set("pageSize", String(TASKS_PAGE_SIZE));
+    return `?${p.toString()}`;
+  }, [view, status, assignedToId, projectId, search, page]);
 
   const loadCurrentUser = useCallback(async () => {
     const res = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
@@ -90,7 +108,11 @@ function HomeContent() {
     if (!res.ok) throw new Error("Failed to load tasks");
     const data = await res.json();
     setTasks(data.tasks || []);
-  }, [qs]);
+    if (data.pagination) {
+      setPagination(data.pagination);
+      if (data.pagination.page !== page) setPage(data.pagination.page);
+    }
+  }, [qs, page]);
 
   const loadUsers = useCallback(async () => {
     const res = await fetch(`${API_URL}/tasks/meta`, { credentials: "include" });
@@ -100,6 +122,10 @@ function HomeContent() {
     setUsers(data.users || []);
     setProjects(data.projects || []);
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [view]);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,13 +141,6 @@ function HomeContent() {
       cancelled = true;
     };
   }, [loadCurrentUser, loadTasks, loadUsers]);
-
-  const filteredTasks = useMemo(() => {
-    if (!currentUser) return tasks;
-    if (view === "assigned") return tasks.filter((t) => t.assignedTo?.id === currentUser.id && t.status !== "DONE");
-    if (view === "created") return tasks.filter((t) => t.createdBy.id === currentUser.id);
-    return tasks;
-  }, [tasks, currentUser, view]);
 
   const pageTitle = VIEW_TITLES[view] ?? "Tasks";
   const pageSubtitle = view === "assigned"
@@ -146,7 +165,7 @@ function HomeContent() {
         <div className="bb-admin-list-box">
           <div className="bb-admin-list-box-header">
             <h2 className="bb-admin-list-box-title">Task list</h2>
-            <span className="bb-admin-label">{filteredTasks.length} total</span>
+            <span className="bb-admin-label">{pagination.total} total</span>
           </div>
 
           <div className="bb-task-filters">
@@ -157,7 +176,10 @@ function HomeContent() {
                 className="bb-admin-input"
                 placeholder="Search by title or description…"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
               />
             </label>
 
@@ -167,7 +189,10 @@ function HomeContent() {
                 <select
                   className="bb-select"
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as TaskStatus | "")}
+                  onChange={(e) => {
+                    setStatus(e.target.value as TaskStatus | "");
+                    setPage(1);
+                  }}
                 >
                   <option value="">All</option>
                   {TASK_STATUS_OPTIONS.map((opt) => (
@@ -183,7 +208,10 @@ function HomeContent() {
                 <select
                   className="bb-select"
                   value={assignedToId}
-                  onChange={(e) => setAssignedToId(e.target.value)}
+                  onChange={(e) => {
+                    setAssignedToId(e.target.value);
+                    setPage(1);
+                  }}
                 >
                   <option value="">Anyone</option>
                   {users.map((u) => (
@@ -199,7 +227,10 @@ function HomeContent() {
                 <select
                   className="bb-select"
                   value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
+                  onChange={(e) => {
+                    setProjectId(e.target.value);
+                    setPage(1);
+                  }}
                 >
                   <option value="">All</option>
                   {projects.map((p) => (
@@ -225,7 +256,7 @@ function HomeContent() {
                 </tr>
               </thead>
               <tbody>
-                {filteredTasks.length === 0 ? (
+                {tasks.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="bb-admin-cell-empty">
                       {status || assignedToId || projectId || search.trim() || view
@@ -237,7 +268,7 @@ function HomeContent() {
                     </td>
                   </tr>
                 ) : (
-                  filteredTasks.map((t) => (
+                  tasks.map((t) => (
                     <tr key={t.id}>
                       <td>
                         <Link href={taskPath(t.publicId)} className="bb-admin-cell-primary hover:underline">
@@ -266,6 +297,15 @@ function HomeContent() {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="bb-admin-list-box-footer">
+            <Pagination
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              total={pagination.total}
+              totalPages={pagination.totalPages}
+              onPageChange={setPage}
+            />
           </div>
         </div>
       </main>

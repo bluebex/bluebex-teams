@@ -37,10 +37,18 @@ function isEtaBeforeToday(eta: string) {
   return eta < etaTodayString();
 }
 
+const TASK_LIST_PAGE_SIZE_DEFAULT = 20;
+const TASK_LIST_PAGE_SIZE_MAX = 100;
+
 tasksRouter.get("/", async (req: AuthedRequest, res) => {
   try {
   const processIds = await accessibleProcessIds(req.user!.id);
-  if (processIds.length === 0) return res.json({ tasks: [] });
+  if (processIds.length === 0) {
+    return res.json({
+      tasks: [],
+      pagination: { page: 1, pageSize: TASK_LIST_PAGE_SIZE_DEFAULT, total: 0, totalPages: 1 },
+    });
+  }
 
   const query = z
     .object({
@@ -49,6 +57,14 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
       processId: z.string().optional(),
       projectId: z.string().optional(),
       search: z.string().optional(),
+      view: z.enum(["assigned", "created"]).optional(),
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(TASK_LIST_PAGE_SIZE_MAX)
+        .default(TASK_LIST_PAGE_SIZE_DEFAULT),
     })
     .parse(req.query);
 
@@ -56,8 +72,6 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
 
   const where: Prisma.TaskWhereInput = {
     processId: { in: processIds },
-    ...(query.assignedToId ? { assignedToId: query.assignedToId } : {}),
-    ...(query.status ? { status: query.status } : {}),
     ...(query.processId ? { processId: query.processId } : {}),
     ...(query.projectId ? { projectId: query.projectId } : {}),
     ...(search
@@ -71,9 +85,31 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
       : {}),
   };
 
+  if (query.view === "assigned") {
+    where.assignedToId = req.user!.id;
+    if (!query.status) {
+      where.status = { not: "DONE" };
+    } else {
+      where.status = query.status;
+    }
+  } else if (query.view === "created") {
+    where.createdById = req.user!.id;
+    if (query.status) where.status = query.status;
+    if (query.assignedToId) where.assignedToId = query.assignedToId;
+  } else {
+    if (query.assignedToId) where.assignedToId = query.assignedToId;
+    if (query.status) where.status = query.status;
+  }
+
+  const total = await prisma.task.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / query.pageSize));
+  const page = Math.min(query.page, totalPages);
+
   const tasks = await prisma.task.findMany({
     where,
     orderBy: { updatedAt: "desc" },
+    skip: (page - 1) * query.pageSize,
+    take: query.pageSize,
     include: {
       createdBy: { select: { id: true, username: true, name: true } },
       assignedTo: { select: { id: true, username: true, name: true } },
@@ -81,7 +117,16 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
       project: { select: { id: true, name: true } },
     },
   });
-  res.json({ tasks });
+
+  res.json({
+    tasks,
+    pagination: {
+      page,
+      pageSize: query.pageSize,
+      total,
+      totalPages,
+    },
+  });
   } catch (err) {
     console.error("GET /tasks failed:", err);
     return res.status(500).json({ error: "Failed to load tasks" });

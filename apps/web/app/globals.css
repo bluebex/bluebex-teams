@@ -523,6 +523,38 @@ body {
   background: color-mix(in oklab, var(--background) 98%, var(--foreground) 2%);
 }
 
+.bb-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+}
+
+.bb-pagination-summary {
+  font-family: var(--font-dm-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--bb-muted);
+}
+
+.bb-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bb-pagination-page {
+  font-family: var(--font-dm-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--bb-muted);
+  min-width: 6.5rem;
+  text-align: center;
+}
+
+.bb-pagination-btn {
+  min-width: 5.5rem;
+}
+
 .bb-admin-modal-overlay {
   position: fixed;
   inset: 0;
