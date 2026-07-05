@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
@@ -8,7 +8,11 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { Pagination } from "@/components/Pagination";
 import { MultiSelect } from "@/components/MultiSelect";
-import { TASK_STATUS_OPTIONS, type TaskStatus } from "@/lib/taskStatus";
+import {
+  OPEN_TASK_STATUSES,
+  TASK_STATUS_OPTIONS,
+  type TaskStatus,
+} from "@/lib/taskStatus";
 import { taskPath } from "@/lib/taskPublicId";
 import { type TaskPriority } from "@/lib/taskPriority";
 import { type TaskCategory } from "@/lib/taskCategory";
@@ -58,6 +62,14 @@ const VIEW_TITLES: Record<string, string> = {
   created: "Created by me",
 };
 
+const NO_DEFAULT_STATUSES: TaskStatus[] = [];
+
+function resolveDefaultStatuses(view: string, propDefaults: TaskStatus[]): TaskStatus[] {
+  if (propDefaults.length > 0) return propDefaults;
+  if (view === "assigned") return OPEN_TASK_STATUSES;
+  return [];
+}
+
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
     year: "numeric",
@@ -78,16 +90,20 @@ export function TaskListView({
   itemLabel = "Task",
   emptyLabel = "tasks",
   errorMessage = "Failed to load tasks",
-  defaultSelectedStatuses = [],
+  defaultSelectedStatuses = NO_DEFAULT_STATUSES,
 }: TaskListViewProps) {
   const searchParams = useSearchParams();
   const view = fixedCategory ? "" : (searchParams.get("view") ?? "");
+  const defaultStatusesRef = useRef(defaultSelectedStatuses);
+  defaultStatusesRef.current = defaultSelectedStatuses;
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [tasks, setTasks] = useState<TaskLite[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
-  const [selectedStatuses, setSelectedStatuses] = useState<TaskStatus[]>(defaultSelectedStatuses);
+  const [selectedStatuses, setSelectedStatuses] = useState<TaskStatus[]>(() =>
+    resolveDefaultStatuses(view, defaultSelectedStatuses),
+  );
   const [assignedToId, setAssignedToId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [search, setSearch] = useState("");
@@ -149,6 +165,7 @@ export function TaskListView({
   }, []);
 
   useEffect(() => {
+    setSelectedStatuses(resolveDefaultStatuses(view, defaultStatusesRef.current));
     setPage(1);
   }, [view, fixedCategory]);
 

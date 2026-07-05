@@ -14,6 +14,9 @@ export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = (
   label: TASK_STATUS_LABELS[value],
 }));
 
+/** Default open statuses for assigned and bugs lists. */
+export const OPEN_TASK_STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS"];
+
 /** Display label for task status in lists and badges. */
 export function formatTaskStatusLabel(
   status: TaskStatus,
