@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { DatePicker } from "@/components/DatePicker";
 import { TASK_PRIORITY_OPTIONS, parseTaskPriority, type TaskPriority } from "@/lib/taskPriority";
+import { TASK_CATEGORY_OPTIONS, parseTaskCategory, type TaskCategory } from "@/lib/taskCategory";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -25,6 +26,7 @@ function NewTaskContent() {
   const preProjectId = searchParams.get("projectId") ?? "";
   const preProcessId = searchParams.get("processId") ?? "";
   const prePriority = parseTaskPriority(searchParams.get("priority"));
+  const preCategory = parseTaskCategory(searchParams.get("category"));
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,7 @@ function NewTaskContent() {
     description: "",
     assignedToId: "",
     priority: "P1" as TaskPriority,
+    category: "TASK" as TaskCategory,
     eta: "",
   });
 
@@ -67,10 +70,11 @@ function NewTaskContent() {
           projectId: preProjectId,
           processId: autoProcessId,
           ...(prePriority ? { priority: prePriority } : {}),
+          ...(preCategory ? { category: preCategory } : {}),
         }));
       }
     }
-  }, [preProjectId, preProcessId, prePriority]);
+  }, [preProjectId, preProcessId, prePriority, preCategory]);
 
   useEffect(() => {
     (async () => {
@@ -103,6 +107,7 @@ function NewTaskContent() {
           processId: newTask.processId,
           assignedToId: newTask.assignedToId || undefined,
           priority: newTask.priority,
+          category: newTask.category,
           ...(newTask.eta ? { eta: newTask.eta } : {}),
         }),
       });
@@ -205,6 +210,23 @@ function NewTaskContent() {
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                   placeholder="Add more details…"
                 />
+              </label>
+
+              <label className="block text-sm">
+                <span className="bb-admin-label">Category</span>
+                <select
+                  className="bb-select"
+                  value={newTask.category}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, category: e.target.value as TaskCategory })
+                  }
+                >
+                  {TASK_CATEGORY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="block text-sm">

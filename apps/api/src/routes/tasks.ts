@@ -96,6 +96,7 @@ tasksRouter.post("/", async (req: AuthedRequest, res) => {
       processId: z.string().min(1),
       assignedToId: z.string().optional(),
       priority: z.enum(["P0", "P1", "P2"]).optional(),
+      category: z.enum(["TASK", "BUG"]).optional(),
       eta: z.string().date().optional(),
     })
     .parse(req.body);
@@ -122,6 +123,7 @@ tasksRouter.post("/", async (req: AuthedRequest, res) => {
       createdById: req.user!.id,
       assignedToId: body.assignedToId,
       priority: body.priority ?? "P1",
+      category: body.category ?? "TASK",
       ...(body.eta ? { eta: etaToStored(body.eta) } : {}),
       status: "TODO",
       statusLogs: { create: { userId: req.user!.id, fromStatus: null, toStatus: "TODO" } },
@@ -190,6 +192,7 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
       assignedToId: z.string().nullable().optional(),
       status: z.enum(["TODO", "IN_PROGRESS", "DONE"]).optional(),
       priority: z.enum(["P0", "P1", "P2"]).optional(),
+      category: z.enum(["TASK", "BUG"]).optional(),
       eta: z.union([z.string().date(), z.null()]).optional(),
     })
     .parse(req.body);
@@ -201,6 +204,7 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
       processId: true,
       status: true,
       priority: true,
+      category: true,
       eta: true,
       title: true,
       description: true,
@@ -223,6 +227,7 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
     ...(body.description !== undefined ? { description: body.description } : {}),
     ...(body.assignedToId !== undefined ? { assignedToId: body.assignedToId } : {}),
     ...(body.priority ? { priority: body.priority } : {}),
+    ...(body.category ? { category: body.category } : {}),
     ...(body.eta !== undefined ? { eta: body.eta ? etaToStored(body.eta) : null } : {}),
   };
 
@@ -286,6 +291,20 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
           field: "priority",
           fromValue: existing.priority,
           toValue: body.priority,
+        },
+      }),
+    );
+  }
+
+  if (body.category && body.category !== existing.category) {
+    tx.push(
+      prisma.taskChangeLog.create({
+        data: {
+          taskId: id,
+          userId: req.user!.id,
+          field: "category",
+          fromValue: existing.category,
+          toValue: body.category,
         },
       }),
     );

@@ -24,6 +24,11 @@ enum TaskPriority {
   P2
 }
 
+enum TaskCategory {
+  TASK
+  BUG
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -117,6 +122,7 @@ model Task {
   description  String?
   status       TaskStatus   @default(TODO)
   priority     TaskPriority @default(P1)
+  category     TaskCategory @default(TASK)
   eta          DateTime?    @db.Date
 
   projectId    String

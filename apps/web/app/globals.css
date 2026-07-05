@@ -202,6 +202,18 @@ body {
   background: #fafafa;
 }
 
+.bb-category-badge--task {
+  color: #525252;
+  border-color: #d4d4d4;
+  background: #fafafa;
+}
+
+.bb-category-badge--bug {
+  color: #b91c1c;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
 .bb-task-comments-box {
   width: 100%;
 }
