@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -10,6 +11,7 @@ type Process = { id: string; name: string };
 type Project = { id: string; name: string; processes: Process[] };
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export default function ProjectsPage() {
                   <tr
                     key={project.id}
                     className="cursor-pointer hover:bg-[var(--bb-line)]/30 transition-colors"
-                    onClick={() => (window.location.href = `/?projectId=${project.id}`)}
+                    onClick={() => router.push(`/?projectId=${project.id}`)}
                   >
                     <td className="bb-admin-cell-primary">
                       <Link

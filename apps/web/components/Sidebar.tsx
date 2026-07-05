@@ -24,8 +24,9 @@ export function Sidebar() {
     (href: string, event: MouseEvent<HTMLAnchorElement>) => {
       if (pathname !== "/") return;
 
-      const targetView = new URL(href, window.location.origin).searchParams.get("view") ?? "";
-      if (targetView === view) {
+      const target = new URL(href, window.location.origin);
+      const current = new URL(window.location.href);
+      if (target.pathname === current.pathname && target.search === current.search) {
         event.preventDefault();
         return;
       }
@@ -33,7 +34,7 @@ export function Sidebar() {
       event.preventDefault();
       router.push(href);
     },
-    [pathname, router, view],
+    [pathname, router],
   );
 
   const loadUser = useCallback(async () => {

@@ -94,6 +94,7 @@ export function TaskListView({
 }: TaskListViewProps) {
   const searchParams = useSearchParams();
   const view = fixedCategory ? "" : (searchParams.get("view") ?? "");
+  const urlProjectId = searchParams.get("projectId") ?? "";
   const defaultStatusesRef = useRef(defaultSelectedStatuses);
   defaultStatusesRef.current = defaultSelectedStatuses;
 
@@ -105,7 +106,7 @@ export function TaskListView({
     resolveDefaultStatuses(view, defaultSelectedStatuses),
   );
   const [assignedToId, setAssignedToId] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [projectId, setProjectId] = useState(urlProjectId);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<TaskPagination>({
@@ -166,8 +167,9 @@ export function TaskListView({
 
   useEffect(() => {
     setSelectedStatuses(resolveDefaultStatuses(view, defaultStatusesRef.current));
+    setProjectId(urlProjectId);
     setPage(1);
-  }, [view, fixedCategory]);
+  }, [view, fixedCategory, urlProjectId]);
 
   useEffect(() => {
     let cancelled = false;
