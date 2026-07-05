@@ -212,48 +212,50 @@ function NewTaskContent() {
                 />
               </label>
 
-              <label className="block text-sm">
-                <span className="bb-admin-label">Category</span>
-                <select
-                  className="bb-select"
-                  value={newTask.category}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, category: e.target.value as TaskCategory })
-                  }
-                >
-                  {TASK_CATEGORY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="bb-task-filter-row">
+                <label className="bb-task-filter-field text-sm">
+                  <span className="bb-admin-label">Category</span>
+                  <select
+                    className="bb-select"
+                    value={newTask.category}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, category: e.target.value as TaskCategory })
+                    }
+                  >
+                    {TASK_CATEGORY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="block text-sm">
-                <span className="bb-admin-label">Priority</span>
-                <select
-                  className="bb-select"
-                  value={newTask.priority}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, priority: e.target.value as TaskPriority })
-                  }
-                >
-                  {TASK_PRIORITY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <label className="bb-task-filter-field text-sm">
+                  <span className="bb-admin-label">Priority</span>
+                  <select
+                    className="bb-select"
+                    value={newTask.priority}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, priority: e.target.value as TaskPriority })
+                    }
+                  >
+                    {TASK_PRIORITY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="block text-sm">
-                <span className="bb-admin-label">ETA (optional)</span>
-                <DatePicker
-                  value={newTask.eta}
-                  placeholder="Pick a date"
-                  onChange={(next) => setNewTask({ ...newTask, eta: next ?? "" })}
-                />
-              </label>
+                <label className="bb-task-filter-field text-sm">
+                  <span className="bb-admin-label">ETA (optional)</span>
+                  <DatePicker
+                    value={newTask.eta}
+                    placeholder="Pick a date"
+                    onChange={(next) => setNewTask({ ...newTask, eta: next ?? "" })}
+                  />
+                </label>
+              </div>
 
               <label className="block text-sm">
                 <span className="bb-admin-label">Assign to (optional)</span>
