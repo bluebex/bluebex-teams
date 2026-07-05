@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
@@ -98,6 +98,8 @@ export default function TaskPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [saving, setSaving] = useState(false);
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const commentSubmittingRef = useRef(false);
 
   const refresh = useMemo(
     () => async () => {
@@ -132,15 +134,25 @@ export default function TaskPage() {
   }, [publicId, refresh]);
 
   async function addComment() {
-    if (!comment.trim()) return;
-    await fetch(`${API_URL}/tasks/${publicId}/comments`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: comment }),
-    });
+    const body = comment.trim();
+    if (!body || commentSubmittingRef.current) return;
+
+    commentSubmittingRef.current = true;
+    setSubmittingComment(true);
     setComment("");
-    await refresh();
+
+    try {
+      await fetch(`${API_URL}/tasks/${publicId}/comments`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
+      await refresh();
+    } finally {
+      commentSubmittingRef.current = false;
+      setSubmittingComment(false);
+    }
   }
 
   async function saveTitle() {
@@ -549,9 +561,15 @@ export default function TaskPage() {
                   users={users}
                   placeholder="Write a comment…"
                   onSubmit={addComment}
+                  disabled={submittingComment}
                 />
-                <button type="button" className="bb-admin-btn" onClick={addComment}>
-                  Comment
+                <button
+                  type="button"
+                  className="bb-admin-btn"
+                  disabled={submittingComment || !comment.trim()}
+                  onClick={addComment}
+                >
+                  {submittingComment ? "Commenting…" : "Comment"}
                 </button>
               </div>
             </div>

@@ -14,6 +14,7 @@ type CommentMentionInputProps = {
   users: MentionUser[];
   placeholder?: string;
   onSubmit?: () => void;
+  disabled?: boolean;
 };
 
 export function CommentMentionInput({
@@ -22,6 +23,7 @@ export function CommentMentionInput({
   users,
   placeholder,
   onSubmit,
+  disabled = false,
 }: CommentMentionInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [mentionStart, setMentionStart] = useState<number | null>(null);
@@ -92,6 +94,7 @@ export function CommentMentionInput({
       }
       if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
+        if (disabled) return;
         const user = suggestions[highlightIndex];
         if (user) selectUser(user);
         return;
@@ -106,6 +109,7 @@ export function CommentMentionInput({
 
     if (e.key === "Enter") {
       e.preventDefault();
+      if (e.repeat || disabled) return;
       onSubmit?.();
     }
   }
@@ -123,6 +127,7 @@ export function CommentMentionInput({
         className="bb-input !mt-0 w-full"
         value={value}
         placeholder={placeholder}
+        disabled={disabled}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onClick={(e) => syncMentionState(value, e.currentTarget.selectionStart ?? value.length)}
