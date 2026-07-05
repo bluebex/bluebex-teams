@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AdminModal } from "./AdminModal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -11,12 +11,30 @@ type CurrentUser = { id: string; username: string; name: string; role: "ADMIN" |
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const view = searchParams.get("view") ?? "";
 
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [showLogout, setShowLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  /** Next.js may skip client nav between `/` and `/?view=…` (same pathname). */
+  const navigateHomeList = useCallback(
+    (href: string, event: MouseEvent<HTMLAnchorElement>) => {
+      if (pathname !== "/") return;
+
+      const targetView = new URL(href, window.location.origin).searchParams.get("view") ?? "";
+      if (targetView === view) {
+        event.preventDefault();
+        return;
+      }
+
+      event.preventDefault();
+      router.push(href);
+    },
+    [pathname, router, view],
+  );
 
   const loadUser = useCallback(async () => {
     try {
@@ -46,7 +64,7 @@ export function Sidebar() {
     <>
       <aside className="bb-sidebar">
         <div className="bb-sidebar-brand">
-          <Link href="/" className="bb-sidebar-logo">
+          <Link href="/" className="bb-sidebar-logo" onClick={(e) => navigateHomeList("/", e)}>
             <span className="bb-sidebar-logo-mark">B</span>
             <span>Bluebex Teams</span>
           </Link>
@@ -78,6 +96,7 @@ export function Sidebar() {
           <Link
             href="/"
             className={`bb-sidebar-link${pathname === "/" && !view ? " bb-sidebar-link--active" : ""}`}
+            onClick={(e) => navigateHomeList("/", e)}
           >
             <HomeIcon />
             <span>Home</span>
@@ -85,6 +104,7 @@ export function Sidebar() {
           <Link
             href="/?view=assigned"
             className={`bb-sidebar-link${view === "assigned" ? " bb-sidebar-link--active" : ""}`}
+            onClick={(e) => navigateHomeList("/?view=assigned", e)}
           >
             <UserIcon />
             <span>Assigned to me</span>
@@ -92,6 +112,7 @@ export function Sidebar() {
           <Link
             href="/?view=created"
             className={`bb-sidebar-link${view === "created" ? " bb-sidebar-link--active" : ""}`}
+            onClick={(e) => navigateHomeList("/?view=created", e)}
           >
             <PenIcon />
             <span>Created by me</span>
