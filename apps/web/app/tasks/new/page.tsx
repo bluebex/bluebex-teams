@@ -28,6 +28,7 @@ function NewTaskContent() {
   const preProcessId = searchParams.get("processId") ?? "";
   const prePriority = parseTaskPriority(searchParams.get("priority"));
   const preCategory = parseTaskCategory(searchParams.get("category"));
+  const isBugForm = preCategory === "BUG";
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +41,8 @@ function NewTaskContent() {
     title: "",
     description: "",
     assignedToId: "",
-    priority: "P1" as TaskPriority,
-    category: "TASK" as TaskCategory,
+    priority: prePriority ?? "P1",
+    category: preCategory ?? "TASK",
     eta: "",
   });
 
@@ -74,6 +75,12 @@ function NewTaskContent() {
           ...(preCategory ? { category: preCategory } : {}),
         }));
       }
+    } else if (prePriority || preCategory) {
+      setNewTask((prev) => ({
+        ...prev,
+        ...(prePriority ? { priority: prePriority } : {}),
+        ...(preCategory ? { category: preCategory } : {}),
+      }));
     }
   }, [preProjectId, preProcessId, prePriority, preCategory]);
 
@@ -128,10 +135,14 @@ function NewTaskContent() {
   return (
     <main className="bb-container bb-page space-y-8 max-w-2xl">
       <PageHeader
-        title="Create task"
-        subtitle="Add a new task to a project process."
-        backHref="/"
-        backLabel="← Back to tasks"
+        title={isBugForm ? "Create bug" : "Create task"}
+        subtitle={
+          isBugForm
+            ? "Report a new bug in a project process."
+            : "Add a new task to a project process."
+        }
+        backHref={isBugForm ? "/bugs" : "/"}
+        backLabel={isBugForm ? "← Back to bugs" : "← Back to tasks"}
       />
 
       <div className="bb-admin-list-box">
