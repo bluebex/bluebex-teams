@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { DatePicker } from "@/components/DatePicker";
 import { TASK_PRIORITY_OPTIONS, parseTaskPriority, type TaskPriority } from "@/lib/taskPriority";
 import { TASK_CATEGORY_OPTIONS, parseTaskCategory, type TaskCategory } from "@/lib/taskCategory";
+import { capitalizeFirstLetter } from "@/lib/format";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -95,6 +96,7 @@ function NewTaskContent() {
       setError("Title and process are required.");
       return;
     }
+    const title = capitalizeFirstLetter(newTask.title.trim());
     setSubmitting(true);
     try {
       const res = await fetch(`${API_URL}/tasks`, {
@@ -102,7 +104,7 @@ function NewTaskContent() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: newTask.title,
+          title,
           description: newTask.description || undefined,
           processId: newTask.processId,
           assignedToId: newTask.assignedToId || undefined,
@@ -197,7 +199,9 @@ function NewTaskContent() {
                 <input
                   className="bb-input"
                   value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, title: capitalizeFirstLetter(e.target.value) })
+                  }
                   placeholder="What needs to be done?"
                 />
               </label>
