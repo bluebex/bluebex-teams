@@ -57,6 +57,7 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
       processId: z.string().optional(),
       projectId: z.string().optional(),
       search: z.string().optional(),
+      category: z.enum(["TASK", "BUG"]).optional(),
       view: z.enum(["assigned", "created"]).optional(),
       page: z.coerce.number().int().min(1).default(1),
       pageSize: z.coerce
@@ -84,6 +85,10 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
         }
       : {}),
   };
+
+  if (query.category) {
+    where.category = query.category;
+  }
 
   if (query.view === "assigned") {
     where.assignedToId = req.user!.id;

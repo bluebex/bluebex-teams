@@ -97,6 +97,13 @@ export function Sidebar() {
             <span>Created by me</span>
           </Link>
           <Link
+            href="/bugs"
+            className={`bb-sidebar-link${pathname === "/bugs" ? " bb-sidebar-link--active" : ""}`}
+          >
+            <BugIcon />
+            <span>Bugs</span>
+          </Link>
+          <Link
             href="/projects"
             className={`bb-sidebar-link${pathname === "/projects" ? " bb-sidebar-link--active" : ""}`}
           >
@@ -188,6 +195,22 @@ function PenIcon() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </svg>
+  );
+}
+
+function BugIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2v2" />
+      <path d="M16 2v2" />
+      <path d="M12 6v2" />
+      <path d="M4 10h2" />
+      <path d="M18 10h2" />
+      <path d="M6 16l2-2" />
+      <path d="M16 16l-2-2" />
+      <path d="M12 22v-2" />
+      <ellipse cx="12" cy="14" rx="4" ry="5" />
     </svg>
   );
 }
