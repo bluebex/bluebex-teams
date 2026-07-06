@@ -8,7 +8,8 @@ function HomeTaskList() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view") ?? "all";
   const projectId = searchParams.get("projectId") ?? "all";
-  return <TaskListView key={`${view}:${projectId}`} />;
+  const hotlistId = searchParams.get("hotlistId") ?? "all";
+  return <TaskListView key={`${view}:${projectId}:${hotlistId}`} />;
 }
 
 export default function Home() {

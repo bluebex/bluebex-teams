@@ -28,6 +28,12 @@ import {
 } from "@/lib/taskCategory";
 import { formatTaskEtaLogLabel, toDateInputValue } from "@/lib/taskEta";
 import { isTaskPublicId, normalizeTaskPublicId } from "@/lib/taskPublicId";
+import { HotlistPicker } from "@/components/HotlistPicker";
+import {
+  formatHotlistChangeLogText,
+  formatChangeFieldLabel,
+  type HotlistLite,
+} from "@/lib/hotlist";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -63,6 +69,7 @@ type Task = {
     createdAt: string;
     user: UserLite;
   }[];
+  hotlists: HotlistLite[];
 };
 
 function formatChangeText(value: string | null | undefined) {
@@ -87,6 +94,8 @@ export default function TaskPage() {
   const publicId = normalizeTaskPublicId(rawParam);
   const [task, setTask] = useState<Task | null>(null);
   const [users, setUsers] = useState<UserLite[]>([]);
+  const [hotlists, setHotlists] = useState<HotlistLite[]>([]);
+  const [selectedHotlistIds, setSelectedHotlistIds] = useState<string[]>([]);
   const [comment, setComment] = useState("");
   const [status, setStatus] = useState<TaskStatus>("TODO");
   const [priority, setPriority] = useState<TaskPriority>("P1");
@@ -113,6 +122,7 @@ export default function TaskPage() {
       if (!taskRes.ok) return setError("Failed to load task");
       const taskData = await taskRes.json();
       setTask(taskData.task);
+      setSelectedHotlistIds((taskData.task.hotlists || []).map((h: HotlistLite) => h.hotlistId));
       setStatus(taskData.task.status);
       setPriority(taskData.task.priority);
       setCategory(taskData.task.category);
@@ -120,6 +130,7 @@ export default function TaskPage() {
       if (metaRes.ok) {
         const metaData = await metaRes.json();
         setUsers(metaData.users || []);
+        setHotlists(metaData.hotlists || []);
       }
     },
     [publicId],
@@ -221,6 +232,24 @@ export default function TaskPage() {
     await refresh();
   }
 
+  async function updateHotlists(nextHotlistIds: string[]) {
+    const previous = selectedHotlistIds;
+    setSelectedHotlistIds(nextHotlistIds);
+    const res = await fetch(`${API_URL}/tasks/${publicId}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hotlistIds: nextHotlistIds }),
+    });
+    if (!res.ok) {
+      setSelectedHotlistIds(previous);
+      setError("Failed to update hotlists");
+      return;
+    }
+    setError(null);
+    await refresh();
+  }
+
   async function updateEta(next: string | null) {
     const previous = eta;
     setEta(next ?? "");
@@ -266,7 +295,9 @@ export default function TaskPage() {
             l.field === "description" ||
             l.field === "priority" ||
             l.field === "category" ||
-            l.field === "eta",
+            l.field === "eta" ||
+            l.field === "hotlist_add" ||
+            l.field === "hotlist_remove",
         )
         .map((l) => ({
           kind: "change" as const,
@@ -451,6 +482,19 @@ export default function TaskPage() {
                     {task.assignedTo ? task.assignedTo.name : "Unassigned"}
                   </div>
                 </div>
+                <div className="sm:col-span-2">
+                  <HotlistPicker
+                    hotlists={hotlists}
+                    value={selectedHotlistIds}
+                    onChange={(ids) => void updateHotlists(ids)}
+                    onHotlistCreated={(hotlist) => {
+                      setHotlists((prev) =>
+                        [...prev, hotlist].sort((a, b) => a.name.localeCompare(b.name)),
+                      );
+                    }}
+                    label="Hotlists"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -522,7 +566,9 @@ export default function TaskPage() {
                   <div key={`${item.kind}-${item.id}`} className="bb-comment-block">
                     <div className="bb-admin-cell-sub mb-1">
                       {item.user.name} • {formatDateTime(item.createdAt)}
-                      {item.kind === "change" ? ` · ${item.field}` : null}
+                      {item.kind === "change"
+                        ? ` · ${formatChangeFieldLabel(item.field)}`
+                        : null}
                     </div>
                     {item.kind === "comment" ? (
                       <CommentBody body={item.body} users={users} />
@@ -551,6 +597,10 @@ export default function TaskPage() {
                         {formatChangeText(item.fromValue)}
                         {formatChangeText(item.fromValue) ? " → " : "→ "}
                         {formatChangeText(item.toValue)}
+                      </p>
+                    ) : item.field === "hotlist_add" || item.field === "hotlist_remove" ? (
+                      <p className="text-sm bb-admin-cell-secondary">
+                        {formatHotlistChangeLogText(item.field, item.fromValue, item.toValue)}
                       </p>
                     ) : (
                       <p className="text-sm bb-admin-cell-secondary">

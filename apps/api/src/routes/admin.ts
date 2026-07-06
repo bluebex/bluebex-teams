@@ -479,3 +479,31 @@ adminRouter.delete("/tasks/:taskId", async (req, res) => {
   res.json({ ok: true });
 });
 
+adminRouter.get("/hotlists", async (_req, res) => {
+  const hotlists = await prisma.hotlist.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      hotlistId: true,
+      name: true,
+      createdAt: true,
+      createdBy: { select: { id: true, username: true, name: true } },
+      _count: { select: { taskLinks: true } },
+    },
+  });
+  res.json({ hotlists });
+});
+
+adminRouter.delete("/hotlists/:hotlistId", async (req: AuthedRequest, res) => {
+  const hotlistId = z.string().trim().min(1).parse(req.params.hotlistId);
+
+  const existing = await prisma.hotlist.findUnique({
+    where: { hotlistId },
+    select: { id: true },
+  });
+  if (!existing) return res.status(404).json({ error: "Hotlist not found" });
+
+  await prisma.hotlist.delete({ where: { hotlistId } });
+  res.json({ ok: true });
+});
+

@@ -7,6 +7,8 @@ import { DatePicker } from "@/components/DatePicker";
 import { TASK_PRIORITY_OPTIONS, parseTaskPriority, type TaskPriority } from "@/lib/taskPriority";
 import { TASK_CATEGORY_OPTIONS, parseTaskCategory, type TaskCategory } from "@/lib/taskCategory";
 import { capitalizeFirstLetter } from "@/lib/format";
+import { HotlistPicker } from "@/components/HotlistPicker";
+import { type HotlistLite } from "@/lib/hotlist";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -31,6 +33,8 @@ function NewTaskContent() {
   const isBugForm = preCategory === "BUG";
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
+  const [hotlists, setHotlists] = useState<HotlistLite[]>([]);
+  const [hotlistIds, setHotlistIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -59,6 +63,7 @@ function NewTaskContent() {
     const loadedProjects: ProjectOption[] = data.projects || [];
     setProjects(loadedProjects);
     setUsers(data.users || []);
+    setHotlists(data.hotlists || []);
     if (preProjectId) {
       const proj = loadedProjects.find((p) => p.id === preProjectId);
       if (proj) {
@@ -118,6 +123,7 @@ function NewTaskContent() {
           priority: newTask.priority,
           category: newTask.category,
           ...(newTask.eta ? { eta: newTask.eta } : {}),
+          ...(hotlistIds.length > 0 ? { hotlistIds } : {}),
         }),
       });
       if (!res.ok) {
@@ -230,6 +236,18 @@ function NewTaskContent() {
                   placeholder="Add more details…"
                 />
               </label>
+
+              <HotlistPicker
+                hotlists={hotlists}
+                value={hotlistIds}
+                onChange={setHotlistIds}
+                onHotlistCreated={(hotlist) => {
+                  setHotlists((prev) =>
+                    [...prev, hotlist].sort((a, b) => a.name.localeCompare(b.name)),
+                  );
+                }}
+                label="Hotlist (optional)"
+              />
 
               <div className="bb-task-filter-row">
                 <label className="bb-task-filter-field text-sm">

@@ -499,7 +499,7 @@ body {
 
 .bb-task-filter-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   width: 100%;
 }
@@ -564,6 +564,102 @@ body {
 
 .bb-multi-select-option:hover {
   background: color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+
+.bb-hotlist-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bb-hotlist-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.bb-hotlist-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cccccc;
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.bb-hotlist-badge:hover {
+  border-color: #f26625;
+  background: color-mix(in oklab, #f26625 8%, transparent);
+}
+
+.bb-hotlist-badge-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.bb-hotlist-badge-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.bb-hotlist-badge-id {
+  font-family: var(--font-dm-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: 0.03em;
+  opacity: 0.55;
+}
+
+.bb-hotlist-create-link {
+  margin-top: 0.35rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.8125rem;
+  color: #cc4f00;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bb-hotlist-create-link:hover {
+  text-decoration: underline;
+}
+
+.bb-hotlist-select-empty {
+  padding: 0.75rem;
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.6;
+}
+
+.bb-hotlist-select-create {
+  display: block;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: none;
+  border-top: 1px solid #cccccc;
+  background: none;
+  font-size: 0.875rem;
+  color: #cc4f00;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bb-hotlist-select-create:hover {
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+}
+
+.bb-hotlist-select-create--modal {
+  margin-top: 0.75rem;
+  border: 1px solid #cccccc;
 }
 
 .bb-task-filter-field {
@@ -841,6 +937,21 @@ textarea.bb-textarea {
     background: #262626;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
   }
+
+  .bb-hotlist-badge {
+    border-color: #525252;
+  }
+
+  .bb-hotlist-badge:hover {
+    border-color: #737373;
+    background: color-mix(in oklab, #f26625 12%, transparent);
+  }
+
+  .bb-hotlist-select-create,
+  .bb-hotlist-select-create--modal {
+    border-color: #525252;
+  }
+
 }
 
 /* Modal fields: extra specificity vs Tailwind preflight */

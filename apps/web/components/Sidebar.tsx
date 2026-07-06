@@ -89,6 +89,13 @@ export function Sidebar() {
                 <FolderIcon />
                 <span>Projects</span>
               </Link>
+              <Link
+                href="/admin/hotlists"
+                className={`bb-sidebar-link${pathname === "/admin/hotlists" ? " bb-sidebar-link--active" : ""}`}
+              >
+                <TagIcon />
+                <span>Hotlists</span>
+              </Link>
             </nav>
           </div>
         ) : null}
@@ -233,6 +240,15 @@ function BugIcon() {
       <path d="M16 16l-2-2" />
       <path d="M12 22v-2" />
       <ellipse cx="12" cy="14" rx="4" ry="5" />
+    </svg>
+  );
+}
+
+function TagIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.59 13.41 12 22 2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <circle cx="7" cy="7" r="1.5" />
     </svg>
   );
 }

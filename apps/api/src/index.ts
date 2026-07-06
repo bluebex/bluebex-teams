@@ -6,6 +6,7 @@ import { authOptional } from "./lib/auth.js";
 import { authRouter } from "./routes/auth.js";
 import { adminRouter } from "./routes/admin.js";
 import { tasksRouter } from "./routes/tasks.js";
+import { hotlistsRouter } from "./routes/hotlists.js";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.get("/health", (_req, res) => {
 app.use("/auth", authRouter);
 app.use("/admin", adminRouter);
 app.use("/tasks", tasksRouter);
+app.use("/hotlists", hotlistsRouter);
 
 app.listen(env.API_PORT, () => {
   // eslint-disable-next-line no-console

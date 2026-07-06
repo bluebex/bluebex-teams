@@ -5,10 +5,95 @@ import type { Prisma } from "@prisma/client";
 import { requireAuth, type AuthedRequest } from "../lib/auth.js";
 import { accessibleProcessIds, accessibleProjectsWithProcesses, canAccessProcess } from "../lib/access.js";
 import { generateUniqueTaskPublicId, taskWhereFromParam } from "../lib/taskPublicId.js";
+import { resolveHotlistInternalIds } from "../lib/hotlistId.js";
 
 export const tasksRouter = Router();
 
 tasksRouter.use(requireAuth);
+
+const hotlistPublicSelect = { id: true, hotlistId: true, name: true } as const;
+
+const taskHotlistsInclude = {
+  hotlists: {
+    select: {
+      hotlist: { select: hotlistPublicSelect },
+    },
+  },
+} as const;
+
+function mapTaskWithHotlists<
+  T extends { hotlists: { hotlist: { id: string; hotlistId: string; name: string } }[] },
+>(task: T) {
+  const { hotlists, ...rest } = task;
+  return {
+    ...rest,
+    hotlists: hotlists.map((link) => link.hotlist),
+  };
+}
+
+async function linkTaskHotlists(taskId: string, publicHotlistIds: string[]) {
+  const internalIds = await resolveHotlistInternalIds(publicHotlistIds);
+  await prisma.taskHotlist.deleteMany({ where: { taskId } });
+  if (internalIds.length > 0) {
+    await prisma.taskHotlist.createMany({
+      data: internalIds.map((hotlistId) => ({ taskId, hotlistId })),
+    });
+  }
+}
+
+function formatHotlistLogLabel(hotlist: { name: string; hotlistId: string }) {
+  return `${hotlist.name} (${hotlist.hotlistId})`;
+}
+
+async function syncTaskHotlists(
+  taskId: string,
+  userId: string,
+  publicHotlistIds: string[],
+) {
+  const currentLinks = await prisma.taskHotlist.findMany({
+    where: { taskId },
+    include: { hotlist: { select: hotlistPublicSelect } },
+  });
+  const currentPublicIds = new Set(currentLinks.map((link) => link.hotlist.hotlistId));
+  const nextPublicIds = new Set(publicHotlistIds);
+
+  const addedPublicIds = publicHotlistIds.filter((id) => !currentPublicIds.has(id));
+  const removedLinks = currentLinks.filter((link) => !nextPublicIds.has(link.hotlist.hotlistId));
+
+  await linkTaskHotlists(taskId, publicHotlistIds);
+
+  const logs: Prisma.TaskChangeLogCreateManyInput[] = [];
+
+  if (addedPublicIds.length > 0) {
+    const addedHotlists = await prisma.hotlist.findMany({
+      where: { hotlistId: { in: addedPublicIds } },
+      select: hotlistPublicSelect,
+    });
+    for (const hotlist of addedHotlists) {
+      logs.push({
+        taskId,
+        userId,
+        field: "hotlist_add",
+        fromValue: null,
+        toValue: formatHotlistLogLabel(hotlist),
+      });
+    }
+  }
+
+  for (const link of removedLinks) {
+    logs.push({
+      taskId,
+      userId,
+      field: "hotlist_remove",
+      fromValue: formatHotlistLogLabel(link.hotlist),
+      toValue: null,
+    });
+  }
+
+  if (logs.length > 0) {
+    await prisma.taskChangeLog.createMany({ data: logs });
+  }
+}
 
 async function assigneeLabel(userId: string | null | undefined) {
   if (!userId) return "Unassigned";
@@ -60,6 +145,7 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
       search: z.string().optional(),
       category: z.enum(["TASK", "BUG"]).optional(),
       view: z.enum(["assigned", "created"]).optional(),
+      hotlistId: z.string().regex(/^\d{6}$/).optional(),
       page: z.coerce.number().int().min(1).default(1),
       pageSize: z.coerce
         .number()
@@ -93,6 +179,10 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
 
   if (query.category) {
     where.category = query.category;
+  }
+
+  if (query.hotlistId) {
+    where.hotlists = { some: { hotlist: { hotlistId: query.hotlistId } } };
   }
 
   if (query.view === "assigned") {
@@ -129,11 +219,12 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
       assignedTo: { select: { id: true, username: true, name: true } },
       process: { select: { id: true, name: true, projectId: true } },
       project: { select: { id: true, name: true } },
+      ...taskHotlistsInclude,
     },
   });
 
   res.json({
-    tasks,
+    tasks: tasks.map(mapTaskWithHotlists),
     pagination: {
       page,
       pageSize: query.pageSize,
@@ -157,6 +248,7 @@ tasksRouter.post("/", async (req: AuthedRequest, res) => {
       priority: z.enum(["P0", "P1", "P2"]).optional(),
       category: z.enum(["TASK", "BUG"]).optional(),
       eta: z.string().date().optional(),
+      hotlistIds: z.array(z.string().regex(/^\d{6}$/)).optional(),
     })
     .parse(req.body);
 
@@ -192,22 +284,46 @@ tasksRouter.post("/", async (req: AuthedRequest, res) => {
       assignedTo: { select: { id: true, username: true, name: true } },
       process: { select: { id: true, name: true } },
       project: { select: { id: true, name: true } },
+      ...taskHotlistsInclude,
     },
   });
 
-  res.json({ task });
+  if (body.hotlistIds?.length) {
+    try {
+      await syncTaskHotlists(task.id, req.user!.id, body.hotlistIds);
+    } catch {
+      return res.status(400).json({ error: "One or more hotlists not found" });
+    }
+  }
+
+  const fullTask = await prisma.task.findUnique({
+    where: { id: task.id },
+    include: {
+      createdBy: { select: { id: true, username: true, name: true } },
+      assignedTo: { select: { id: true, username: true, name: true } },
+      process: { select: { id: true, name: true } },
+      project: { select: { id: true, name: true } },
+      ...taskHotlistsInclude,
+    },
+  });
+
+  res.json({ task: mapTaskWithHotlists(fullTask ?? task) });
 });
 
 tasksRouter.get("/meta", async (req: AuthedRequest, res) => {
-  const [projects, users] = await Promise.all([
+  const [projects, users, hotlists] = await Promise.all([
     accessibleProjectsWithProcesses(req.user!.id),
     prisma.user.findMany({
       where: { role: "USER" },
       orderBy: { name: "asc" },
       select: { id: true, username: true, name: true },
     }),
+    prisma.hotlist.findMany({
+      orderBy: { name: "asc" },
+      select: hotlistPublicSelect,
+    }),
   ]);
-  res.json({ projects, users });
+  res.json({ projects, users, hotlists });
 });
 
 tasksRouter.get("/:id", async (req: AuthedRequest, res) => {
@@ -231,6 +347,7 @@ tasksRouter.get("/:id", async (req: AuthedRequest, res) => {
         orderBy: { createdAt: "asc" },
         include: { user: { select: { id: true, username: true, name: true } } },
       },
+      ...taskHotlistsInclude,
     },
   });
   if (!task) return res.status(404).json({ error: "Not found" });
@@ -238,7 +355,7 @@ tasksRouter.get("/:id", async (req: AuthedRequest, res) => {
   const processIds = await accessibleProcessIds(req.user!.id);
   if (!processIds.includes(task.processId)) return res.status(403).json({ error: "No access" });
 
-  res.json({ task });
+  res.json({ task: mapTaskWithHotlists(task) });
 });
 
 tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
@@ -253,6 +370,7 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
       priority: z.enum(["P0", "P1", "P2"]).optional(),
       category: z.enum(["TASK", "BUG"]).optional(),
       eta: z.union([z.string().date(), z.null()]).optional(),
+      hotlistIds: z.array(z.string().regex(/^\d{6}$/)).optional(),
     })
     .parse(req.body);
 
@@ -397,6 +515,15 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
   }
 
   await prisma.$transaction(tx as any);
+
+  if (body.hotlistIds !== undefined) {
+    try {
+      await syncTaskHotlists(id, req.user!.id, body.hotlistIds);
+    } catch {
+      return res.status(400).json({ error: "One or more hotlists not found" });
+    }
+  }
+
   const task = await prisma.task.findUnique({
     where: { id },
     include: {
@@ -404,9 +531,10 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
       assignedTo: { select: { id: true, username: true, name: true } },
       process: { select: { id: true, name: true } },
       project: { select: { id: true, name: true } },
+      ...taskHotlistsInclude,
     },
   });
-  res.json({ task });
+  res.json({ task: task ? mapTaskWithHotlists(task) : null });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: err.issues[0]?.message ?? "Invalid request" });

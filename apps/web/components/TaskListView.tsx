@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { Pagination } from "@/components/Pagination";
 import { MultiSelect } from "@/components/MultiSelect";
+import { HotlistFilterSelect } from "@/components/HotlistFilterSelect";
 import {
   OPEN_TASK_STATUSES,
   TASK_STATUS_OPTIONS,
@@ -16,6 +17,7 @@ import {
 import { taskPath } from "@/lib/taskPublicId";
 import { type TaskPriority } from "@/lib/taskPriority";
 import { type TaskCategory } from "@/lib/taskCategory";
+import { type HotlistLite } from "@/lib/hotlist";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const TASKS_PAGE_SIZE = 20;
@@ -95,6 +97,7 @@ export function TaskListView({
   const searchParams = useSearchParams();
   const view = fixedCategory ? "" : (searchParams.get("view") ?? "");
   const urlProjectId = searchParams.get("projectId") ?? "";
+  const urlHotlistId = searchParams.get("hotlistId") ?? "";
   const defaultStatusesRef = useRef(defaultSelectedStatuses);
   defaultStatusesRef.current = defaultSelectedStatuses;
 
@@ -102,11 +105,13 @@ export function TaskListView({
   const [tasks, setTasks] = useState<TaskLite[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
+  const [hotlists, setHotlists] = useState<HotlistLite[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<TaskStatus[]>(() =>
     resolveDefaultStatuses(view, defaultSelectedStatuses),
   );
   const [assignedToId, setAssignedToId] = useState("");
   const [projectId, setProjectId] = useState(urlProjectId);
+  const [hotlistId, setHotlistId] = useState(urlHotlistId);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<TaskPagination>({
@@ -129,11 +134,12 @@ export function TaskListView({
     }
     if (assignedToId) p.set("assignedToId", assignedToId);
     if (projectId) p.set("projectId", projectId);
+    if (hotlistId) p.set("hotlistId", hotlistId);
     if (search.trim()) p.set("search", search.trim());
     p.set("page", String(page));
     p.set("pageSize", String(TASKS_PAGE_SIZE));
     return `?${p.toString()}`;
-  }, [view, fixedCategory, selectedStatuses, assignedToId, projectId, search, page]);
+  }, [view, fixedCategory, selectedStatuses, assignedToId, projectId, hotlistId, search, page]);
 
   const loadCurrentUser = useCallback(async () => {
     const res = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
@@ -163,13 +169,15 @@ export function TaskListView({
     const data = await res.json();
     setUsers(data.users || []);
     setProjects(data.projects || []);
+    setHotlists(data.hotlists || []);
   }, []);
 
   useEffect(() => {
     setSelectedStatuses(resolveDefaultStatuses(view, defaultStatusesRef.current));
     setProjectId(urlProjectId);
+    setHotlistId(urlHotlistId);
     setPage(1);
-  }, [view, fixedCategory, urlProjectId]);
+  }, [view, fixedCategory, urlProjectId, urlHotlistId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -206,7 +214,7 @@ export function TaskListView({
     selectedStatuses.length < TASK_STATUS_OPTIONS.length;
 
   const hasFilters = Boolean(
-    isStatusFiltered || assignedToId || projectId || search.trim() || view,
+    isStatusFiltered || assignedToId || projectId || hotlistId || search.trim() || view,
   );
 
   const handleStatusChange = (statuses: TaskStatus[]) => {
@@ -290,6 +298,20 @@ export function TaskListView({
                 ))}
               </select>
             </label>
+
+            <HotlistFilterSelect
+              hotlists={hotlists}
+              value={hotlistId}
+              onChange={(next) => {
+                setHotlistId(next);
+                setPage(1);
+              }}
+              onHotlistCreated={(hotlist) => {
+                setHotlists((prev) =>
+                  [...prev, hotlist].sort((a, b) => a.name.localeCompare(b.name)),
+                );
+              }}
+            />
           </div>
         </div>
 
