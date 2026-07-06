@@ -1,5 +1,6 @@
 import {
   formatTaskStatusLabel,
+  statusBadgeUsesUnassignedStyle,
   type TaskStatus,
 } from "@/lib/taskStatus";
 
@@ -10,7 +11,7 @@ export function StatusBadge({
   status: TaskStatus;
   assignedTo?: { id: string } | null;
 }) {
-  const unassigned = !assignedTo;
+  const unassigned = statusBadgeUsesUnassignedStyle(status, assignedTo);
   const badgeClass = unassigned
     ? "bb-status-badge--unassigned"
     : `bb-status-badge--${status.toLowerCase()}`;

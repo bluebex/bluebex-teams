@@ -142,6 +142,7 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
       statusIn: z.string().optional(),
       processId: z.string().optional(),
       projectId: z.string().optional(),
+      priority: z.enum(["P0", "P1", "P2"]).optional(),
       search: z.string().optional(),
       category: z.enum(["TASK", "BUG"]).optional(),
       view: z.enum(["assigned", "created"]).optional(),
@@ -181,6 +182,10 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
 
   if (query.category) {
     where.category = query.category;
+  }
+
+  if (query.priority) {
+    where.priority = query.priority;
   }
 
   if (query.hotlistId) {

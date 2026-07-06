@@ -403,7 +403,16 @@ export default function TaskPage() {
             <div className="bb-admin-list-box-header">
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="bb-admin-label">
-                  {task.project.name} / {task.process.name}
+                  <Link href={`/?projectId=${task.project.id}`} className="bb-admin-label-link">
+                    {task.project.name}
+                  </Link>
+                  {" / "}
+                  <Link
+                    href={`/?projectId=${task.project.id}&processId=${task.process.id}`}
+                    className="bb-admin-label-link"
+                  >
+                    {task.process.name}
+                  </Link>
                 </div>
                 {editingTitle ? (
                   <div className="flex gap-2 items-center mt-1">

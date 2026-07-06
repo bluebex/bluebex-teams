@@ -16,8 +16,8 @@ import {
   type TaskStatus,
 } from "@/lib/taskStatus";
 import { taskPath } from "@/lib/taskPublicId";
-import { type TaskPriority } from "@/lib/taskPriority";
-import { type TaskCategory } from "@/lib/taskCategory";
+import { TASK_PRIORITY_OPTIONS, type TaskPriority } from "@/lib/taskPriority";
+import { TASK_CATEGORY_OPTIONS, type TaskCategory } from "@/lib/taskCategory";
 import { type HotlistLite } from "@/lib/hotlist";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -46,7 +46,12 @@ type TaskPagination = {
   totalPages: number;
 };
 
+type ProcessOption = { id: string; name: string; projectName?: string };
 type EtaFilterMode = "" | "none" | "date";
+
+function formatProcessLabel(process: ProcessOption) {
+  return process.projectName ? `${process.projectName} / ${process.name}` : process.name;
+}
 
 export type TaskListViewProps = {
   fixedCategory?: TaskCategory;
@@ -100,6 +105,7 @@ export function TaskListView({
   const searchParams = useSearchParams();
   const view = fixedCategory ? "" : (searchParams.get("view") ?? "");
   const urlProjectId = searchParams.get("projectId") ?? "";
+  const urlProcessId = searchParams.get("processId") ?? "";
   const urlHotlistId = searchParams.get("hotlistId") ?? "";
   const defaultStatusesRef = useRef(defaultSelectedStatuses);
   defaultStatusesRef.current = defaultSelectedStatuses;
@@ -114,6 +120,9 @@ export function TaskListView({
   );
   const [assignedToId, setAssignedToId] = useState("");
   const [projectId, setProjectId] = useState(urlProjectId);
+  const [processId, setProcessId] = useState(urlProcessId);
+  const [priority, setPriority] = useState<TaskPriority | "">("");
+  const [category, setCategory] = useState<TaskCategory | "">("");
   const [hotlistId, setHotlistId] = useState(urlHotlistId);
   const [etaMode, setEtaMode] = useState<EtaFilterMode>("");
   const [etaDate, setEtaDate] = useState("");
@@ -139,6 +148,9 @@ export function TaskListView({
     }
     if (assignedToId) p.set("assignedToId", assignedToId);
     if (projectId) p.set("projectId", projectId);
+    if (processId) p.set("processId", processId);
+    if (priority) p.set("priority", priority);
+    if (!fixedCategory && category) p.set("category", category);
     if (hotlistId) p.set("hotlistId", hotlistId);
     if (etaMode === "none") p.set("etaIsNull", "true");
     else if (etaMode === "date" && etaDate) p.set("eta", etaDate);
@@ -146,7 +158,31 @@ export function TaskListView({
     p.set("page", String(page));
     p.set("pageSize", String(TASKS_PAGE_SIZE));
     return `?${p.toString()}`;
-  }, [view, fixedCategory, selectedStatuses, assignedToId, projectId, hotlistId, etaMode, etaDate, search, page]);
+  }, [view, fixedCategory, selectedStatuses, assignedToId, projectId, processId, priority, category, hotlistId, etaMode, etaDate, search, page]);
+
+  const processOptions = useMemo((): ProcessOption[] => {
+    if (projectId) {
+      const project = projects.find((p) => p.id === projectId);
+      return (project?.processes ?? []).map((process) => ({
+        id: process.id,
+        name: process.name,
+      }));
+    }
+    return projects.flatMap((project) =>
+      project.processes.map((process) => ({
+        id: process.id,
+        name: process.name,
+        projectName: project.name,
+      })),
+    );
+  }, [projects, projectId]);
+
+  useEffect(() => {
+    if (!processId) return;
+    if (!processOptions.some((process) => process.id === processId)) {
+      setProcessId("");
+    }
+  }, [processOptions, processId]);
 
   const loadCurrentUser = useCallback(async () => {
     const res = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
@@ -182,9 +218,10 @@ export function TaskListView({
   useEffect(() => {
     setSelectedStatuses(resolveDefaultStatuses(view, defaultStatusesRef.current));
     setProjectId(urlProjectId);
+    setProcessId(urlProcessId);
     setHotlistId(urlHotlistId);
     setPage(1);
-  }, [view, fixedCategory, urlProjectId, urlHotlistId]);
+  }, [view, fixedCategory, urlProjectId, urlProcessId, urlHotlistId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -224,6 +261,9 @@ export function TaskListView({
     isStatusFiltered ||
       assignedToId ||
       projectId ||
+      processId ||
+      priority ||
+      category ||
       hotlistId ||
       etaMode === "none" ||
       (etaMode === "date" && etaDate) ||
@@ -267,94 +307,159 @@ export function TaskListView({
             />
           </label>
 
-          <div className="bb-task-filter-row">
-            <MultiSelect
-              label="Status"
-              options={TASK_STATUS_OPTIONS}
-              value={selectedStatuses}
-              onChange={handleStatusChange}
-            />
+          <div className="bb-task-filter-rows">
+            <div className="bb-task-filter-row">
+              <MultiSelect
+                label="Status"
+                options={TASK_STATUS_OPTIONS}
+                value={selectedStatuses}
+                onChange={handleStatusChange}
+              />
 
-            <label className="bb-task-filter-field">
-              <span className="bb-admin-label">Assignee</span>
-              <select
-                className="bb-select"
-                value={assignedToId}
-                onChange={(e) => {
-                  setAssignedToId(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">Anyone</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <HotlistFilterSelect
-              hotlists={hotlists}
-              value={hotlistId}
-              onChange={(next) => {
-                setHotlistId(next);
-                setPage(1);
-              }}
-              onHotlistCreated={(hotlist) => {
-                setHotlists((prev) =>
-                  [...prev, hotlist].sort((a, b) => a.name.localeCompare(b.name)),
-                );
-              }}
-            />
-
-            <div className="bb-task-filter-field">
-              <span className="bb-admin-label">ETA</span>
-              <select
-                className="bb-select"
-                value={etaMode}
-                onChange={(e) => {
-                  const next = e.target.value as EtaFilterMode;
-                  setEtaMode(next);
-                  if (next !== "date") setEtaDate("");
-                  setPage(1);
-                }}
-              >
-                <option value="">All</option>
-                <option value="none">No ETA</option>
-                <option value="date">On date</option>
-              </select>
-              {etaMode === "date" ? (
-                <DatePicker
-                  value={etaDate}
-                  allowAnyDate
-                  placeholder="Pick date"
-                  onChange={(next) => {
-                    setEtaDate(next ?? "");
+              <label className="bb-task-filter-field">
+                <span className="bb-admin-label">Priority</span>
+                <select
+                  className="bb-select"
+                  value={priority}
+                  onChange={(e) => {
+                    setPriority(e.target.value as TaskPriority | "");
                     setPage(1);
                   }}
-                />
-              ) : null}
+                >
+                  <option value="">All</option>
+                  {TASK_PRIORITY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="bb-task-filter-field">
+                <span className="bb-admin-label">Assignee</span>
+                <select
+                  className="bb-select"
+                  value={assignedToId}
+                  onChange={(e) => {
+                    setAssignedToId(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">Anyone</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="bb-task-filter-field">
+                <span className="bb-admin-label">Project</span>
+                <select
+                  className="bb-select"
+                  value={projectId}
+                  onChange={(e) => {
+                    const nextProjectId = e.target.value;
+                    setProjectId(nextProjectId);
+                    setProcessId("");
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
-            <label className="bb-task-filter-field">
-              <span className="bb-admin-label">Project</span>
-              <select
-                className="bb-select"
-                value={projectId}
-                onChange={(e) => {
-                  setProjectId(e.target.value);
+            <div className="bb-task-filter-row">
+              <label className="bb-task-filter-field">
+                <span className="bb-admin-label">Process</span>
+                <select
+                  className="bb-select"
+                  value={processId}
+                  onChange={(e) => {
+                    setProcessId(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All</option>
+                  {processOptions.map((process) => (
+                    <option key={process.id} value={process.id}>
+                      {formatProcessLabel(process)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <HotlistFilterSelect
+                hotlists={hotlists}
+                value={hotlistId}
+                onChange={(next) => {
+                  setHotlistId(next);
                   setPage(1);
                 }}
-              >
-                <option value="">All</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onHotlistCreated={(hotlist) => {
+                  setHotlists((prev) =>
+                    [...prev, hotlist].sort((a, b) => a.name.localeCompare(b.name)),
+                  );
+                }}
+              />
+
+              {!fixedCategory ? (
+                <label className="bb-task-filter-field">
+                  <span className="bb-admin-label">Type</span>
+                  <select
+                    className="bb-select"
+                    value={category}
+                    onChange={(e) => {
+                      setCategory(e.target.value as TaskCategory | "");
+                      setPage(1);
+                    }}
+                  >
+                    <option value="">All</option>
+                    {TASK_CATEGORY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              <div className="bb-task-filter-field">
+                <span className="bb-admin-label">ETA</span>
+                <select
+                  className="bb-select"
+                  value={etaMode}
+                  onChange={(e) => {
+                    const next = e.target.value as EtaFilterMode;
+                    setEtaMode(next);
+                    if (next !== "date") setEtaDate("");
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All</option>
+                  <option value="none">No ETA</option>
+                  <option value="date">On date</option>
+                </select>
+                {etaMode === "date" ? (
+                  <DatePicker
+                    value={etaDate}
+                    allowAnyDate
+                    placeholder="Pick date"
+                    onChange={(next) => {
+                      setEtaDate(next ?? "");
+                      setPage(1);
+                    }}
+                  />
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
 

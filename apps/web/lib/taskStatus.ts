@@ -17,13 +17,23 @@ export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = (
 /** Default open statuses for assigned and bugs lists. */
 export const OPEN_TASK_STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS"];
 
+/** Statuses where an unassigned task shows "Unassigned" instead of the status label. */
+const UNASSIGNED_DISPLAY_STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS"];
+
 /** Display label for task status in lists and badges. */
 export function formatTaskStatusLabel(
   status: TaskStatus,
   assignedTo?: { id: string } | null,
 ): string {
-  if (!assignedTo) return "Unassigned";
+  if (!assignedTo && UNASSIGNED_DISPLAY_STATUSES.includes(status)) return "Unassigned";
   return TASK_STATUS_LABELS[status];
+}
+
+export function statusBadgeUsesUnassignedStyle(
+  status: TaskStatus,
+  assignedTo?: { id: string } | null,
+): boolean {
+  return !assignedTo && UNASSIGNED_DISPLAY_STATUSES.includes(status);
 }
 
 /** Legacy status values kept for old log rows after enum migrations. */
