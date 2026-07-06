@@ -46,12 +46,9 @@ type TaskPagination = {
   totalPages: number;
 };
 
-type ProcessOption = { id: string; name: string; projectName?: string };
-type EtaFilterMode = "" | "none" | "date";
+type ProcessOption = { id: string; name: string };
 
-function formatProcessLabel(process: ProcessOption) {
-  return process.projectName ? `${process.projectName} / ${process.name}` : process.name;
-}
+type EtaFilterMode = "" | "none" | "date";
 
 export type TaskListViewProps = {
   fixedCategory?: TaskCategory;
@@ -161,21 +158,19 @@ export function TaskListView({
   }, [view, fixedCategory, selectedStatuses, assignedToId, projectId, processId, priority, category, hotlistId, etaMode, etaDate, search, page]);
 
   const processOptions = useMemo((): ProcessOption[] => {
-    if (projectId) {
-      const project = projects.find((p) => p.id === projectId);
-      return (project?.processes ?? []).map((process) => ({
-        id: process.id,
-        name: process.name,
-      }));
-    }
-    return projects.flatMap((project) =>
-      project.processes.map((process) => ({
-        id: process.id,
-        name: process.name,
-        projectName: project.name,
-      })),
-    );
+    if (!projectId) return [];
+    const project = projects.find((p) => p.id === projectId);
+    return (project?.processes ?? []).map((process) => ({
+      id: process.id,
+      name: process.name,
+    }));
   }, [projects, projectId]);
+
+  useEffect(() => {
+    if (!projectId && processId) {
+      setProcessId("");
+    }
+  }, [projectId, processId]);
 
   useEffect(() => {
     if (!processId) return;
@@ -382,6 +377,7 @@ export function TaskListView({
                 <select
                   className="bb-select"
                   value={processId}
+                  disabled={!projectId}
                   onChange={(e) => {
                     setProcessId(e.target.value);
                     setPage(1);
@@ -390,7 +386,7 @@ export function TaskListView({
                   <option value="">All</option>
                   {processOptions.map((process) => (
                     <option key={process.id} value={process.id}>
-                      {formatProcessLabel(process)}
+                      {process.name}
                     </option>
                   ))}
                 </select>
