@@ -221,8 +221,12 @@ function NewTaskContent() {
                 <span className="bb-admin-label">Description (optional)</span>
                 <textarea
                   className="bb-textarea"
+                  rows={6}
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.stopPropagation();
+                  }}
                   placeholder="Add more details…"
                 />
               </label>

@@ -299,6 +299,11 @@ body {
   transition: background 0.15s;
 }
 
+.bb-preserve-lines {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .bb-editable-text:hover {
   background: color-mix(in oklab, var(--foreground) 5%, transparent);
 }

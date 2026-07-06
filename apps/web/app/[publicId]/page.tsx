@@ -173,8 +173,9 @@ export default function TaskPage() {
   }
 
   async function saveDesc() {
-    const next = editDesc.trim();
-    if (next === (task?.description ?? "")) {
+    const next = editDesc;
+    const current = task?.description ?? "";
+    if (next === current) {
       setEditingDesc(false);
       return;
     }
@@ -396,9 +397,12 @@ export default function TaskPage() {
                 <div>
                   <textarea
                     className="bb-textarea w-full"
-                    rows={4}
+                    rows={6}
                     value={editDesc}
                     onChange={(e) => setEditDesc(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.stopPropagation();
+                    }}
                     autoFocus
                     disabled={saving}
                   />
@@ -417,7 +421,7 @@ export default function TaskPage() {
                 </div>
               ) : (
                 <p
-                  className="text-sm leading-relaxed bb-editable-text"
+                  className="text-sm leading-relaxed bb-editable-text bb-preserve-lines"
                   onClick={() => {
                     setEditDesc(task.description ?? "");
                     setEditingDesc(true);
@@ -541,6 +545,12 @@ export default function TaskPage() {
                       <p className="text-sm bb-admin-cell-secondary">
                         {formatTaskEtaLogLabel(item.fromValue)} →{" "}
                         {formatTaskEtaLogLabel(item.toValue)}
+                      </p>
+                    ) : item.field === "description" ? (
+                      <p className="text-sm bb-admin-cell-secondary bb-preserve-lines">
+                        {formatChangeText(item.fromValue)}
+                        {formatChangeText(item.fromValue) ? " → " : "→ "}
+                        {formatChangeText(item.toValue)}
                       </p>
                     ) : (
                       <p className="text-sm bb-admin-cell-secondary">
