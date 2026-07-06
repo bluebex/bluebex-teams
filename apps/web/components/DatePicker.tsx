@@ -19,6 +19,8 @@ type DatePickerProps = {
   inline?: boolean;
   disabled?: boolean;
   id?: string;
+  /** When true, any date can be selected (e.g. list filters). Default false for task ETA fields. */
+  allowAnyDate?: boolean;
 };
 
 type PopoverCoords = {
@@ -86,6 +88,7 @@ export function DatePicker({
   inline = false,
   disabled = false,
   id,
+  allowAnyDate = false,
 }: DatePickerProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -94,9 +97,8 @@ export function DatePicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const selected = parseTaskEtaDate(value);
-  const minDate = getTaskEtaMinDate();
-  const defaultMonth =
-    selected && selected >= minDate ? selected : minDate;
+  const minDate = allowAnyDate ? undefined : getTaskEtaMinDate();
+  const defaultMonth = selected ?? minDate ?? new Date();
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
@@ -136,7 +138,7 @@ export function DatePicker({
   function handleSelect(date: Date | undefined) {
     if (!date) return;
     const next = formatTaskEtaApi(date);
-    if (isTaskEtaBeforeToday(next)) return;
+    if (!allowAnyDate && isTaskEtaBeforeToday(next)) return;
     onChange(next);
     setOpen(false);
   }
@@ -169,7 +171,7 @@ export function DatePicker({
                 selected={selected}
                 defaultMonth={defaultMonth}
                 onSelect={handleSelect}
-                disabled={{ before: minDate }}
+                disabled={minDate ? { before: minDate } : undefined}
                 showOutsideDays
               />
               {value ? (

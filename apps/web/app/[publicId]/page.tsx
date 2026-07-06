@@ -112,21 +112,23 @@ export default function TaskPage() {
 
   const refresh = useMemo(
     () => async () => {
-      const [taskRes, metaRes] = await Promise.all([
-        fetch(`${API_URL}/tasks/${publicId}`, { credentials: "include" }),
-        fetch(`${API_URL}/tasks/meta`, { credentials: "include" }),
-      ]);
-      if (taskRes.status === 401 || metaRes.status === 401) {
-        return (window.location.href = "/login");
-      }
+      const taskRes = await fetch(`${API_URL}/tasks/${publicId}`, { credentials: "include" });
+      if (taskRes.status === 401) return (window.location.href = "/login");
       if (!taskRes.ok) return setError("Failed to load task");
       const taskData = await taskRes.json();
-      setTask(taskData.task);
-      setSelectedHotlistIds((taskData.task.hotlists || []).map((h: HotlistLite) => h.hotlistId));
-      setStatus(taskData.task.status);
-      setPriority(taskData.task.priority);
-      setCategory(taskData.task.category);
-      setEta(toDateInputValue(taskData.task.eta));
+      const loadedTask = taskData.task;
+      setTask(loadedTask);
+      setSelectedHotlistIds((loadedTask.hotlists || []).map((h: HotlistLite) => h.hotlistId));
+      setStatus(loadedTask.status);
+      setPriority(loadedTask.priority);
+      setCategory(loadedTask.category);
+      setEta(toDateInputValue(loadedTask.eta));
+
+      const metaUrl = loadedTask.process?.id
+        ? `${API_URL}/tasks/meta?processId=${encodeURIComponent(loadedTask.process.id)}`
+        : `${API_URL}/tasks/meta`;
+      const metaRes = await fetch(metaUrl, { credentials: "include" });
+      if (metaRes.status === 401) return (window.location.href = "/login");
       if (metaRes.ok) {
         const metaData = await metaRes.json();
         setUsers(metaData.users || []);
@@ -315,13 +317,35 @@ export default function TaskPage() {
     );
   }, [task]);
 
+  const similarTaskHref = useMemo(() => {
+    if (!task) return "/tasks/new";
+    const params = new URLSearchParams({
+      projectId: task.project.id,
+      processId: task.process.id,
+      priority: task.priority,
+      category: task.category,
+    });
+    if (task.assignedTo?.id) params.set("assignedToId", task.assignedTo.id);
+    const hotlistIds = (task.hotlists || []).map((h) => h.hotlistId);
+    if (hotlistIds.length > 0) params.set("hotlistIds", hotlistIds.join(","));
+    return `/tasks/new?${params.toString()}`;
+  }, [task]);
+
+  const assigneeOptions = useMemo(() => {
+    const options = [...users];
+    if (task?.assignedTo && !options.some((u) => u.id === task.assignedTo!.id)) {
+      options.push(task.assignedTo);
+    }
+    return options.sort((a, b) => a.name.localeCompare(b.name));
+  }, [users, task?.assignedTo]);
+
   return (
     <main className="bb-container bb-page space-y-8">
       <PageHeader title={task?.title ?? "Task"} backHref="/" backLabel="← Back to tasks">
         {task ? (
           <div className="flex items-center gap-4 flex-wrap" style={{ width: "100%" }}>
             <Link
-              href={`/tasks/new?projectId=${task.project.id}&processId=${task.process.id}&priority=${task.priority}&category=${task.category}`}
+              href={similarTaskHref}
               className="bb-admin-btn bb-admin-btn-outline"
               style={{ marginRight: "auto" }}
             >
@@ -344,7 +368,7 @@ export default function TaskPage() {
                 }}
               >
                 <option value="">Unassigned</option>
-                {users.map((u) => (
+                {assigneeOptions.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>

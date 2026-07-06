@@ -30,6 +30,12 @@ function NewTaskContent() {
   const preProcessId = searchParams.get("processId") ?? "";
   const prePriority = parseTaskPriority(searchParams.get("priority"));
   const preCategory = parseTaskCategory(searchParams.get("category"));
+  const preAssignedToId = searchParams.get("assignedToId") ?? "";
+  const preHotlistIds = useMemo(() => {
+    const raw = searchParams.get("hotlistIds") ?? "";
+    if (!raw) return [];
+    return raw.split(",").map((id) => id.trim()).filter((id) => /^\d{6}$/.test(id));
+  }, [searchParams]);
   const isBugForm = preCategory === "BUG";
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
@@ -62,8 +68,10 @@ function NewTaskContent() {
     const data = await res.json();
     const loadedProjects: ProjectOption[] = data.projects || [];
     setProjects(loadedProjects);
-    setUsers(data.users || []);
     setHotlists(data.hotlists || []);
+    if (preHotlistIds.length > 0) {
+      setHotlistIds(preHotlistIds);
+    }
     if (preProjectId) {
       const proj = loadedProjects.find((p) => p.id === preProjectId);
       if (proj) {
@@ -78,16 +86,33 @@ function NewTaskContent() {
           processId: autoProcessId,
           ...(prePriority ? { priority: prePriority } : {}),
           ...(preCategory ? { category: preCategory } : {}),
+          ...(preAssignedToId ? { assignedToId: preAssignedToId } : {}),
         }));
       }
-    } else if (prePriority || preCategory) {
+    } else if (prePriority || preCategory || preAssignedToId) {
       setNewTask((prev) => ({
         ...prev,
         ...(prePriority ? { priority: prePriority } : {}),
         ...(preCategory ? { category: preCategory } : {}),
+        ...(preAssignedToId ? { assignedToId: preAssignedToId } : {}),
       }));
     }
-  }, [preProjectId, preProcessId, prePriority, preCategory]);
+  }, [preProjectId, preProcessId, prePriority, preCategory, preAssignedToId, preHotlistIds]);
+
+  const loadAssignableUsers = useCallback(async (processId: string) => {
+    if (!processId) {
+      setUsers([]);
+      return;
+    }
+    const res = await fetch(
+      `${API_URL}/tasks/meta?processId=${encodeURIComponent(processId)}`,
+      { credentials: "include" },
+    );
+    if (res.status === 401) return (window.location.href = "/login");
+    if (!res.ok) throw new Error("Failed to load assignees");
+    const data = await res.json();
+    setUsers(data.users || []);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -101,6 +126,27 @@ function NewTaskContent() {
       }
     })();
   }, [loadMeta]);
+
+  useEffect(() => {
+    if (!newTask.processId) {
+      setUsers([]);
+      return;
+    }
+    (async () => {
+      try {
+        await loadAssignableUsers(newTask.processId);
+      } catch {
+        setError("Failed to load assignees");
+      }
+    })();
+  }, [newTask.processId, loadAssignableUsers]);
+
+  useEffect(() => {
+    if (!newTask.assignedToId) return;
+    if (!users.some((u) => u.id === newTask.assignedToId)) {
+      setNewTask((prev) => ({ ...prev, assignedToId: "" }));
+    }
+  }, [users, newTask.assignedToId]);
 
   async function createTask() {
     setError(null);
@@ -176,6 +222,7 @@ function NewTaskContent() {
                       ...newTask,
                       projectId: pid,
                       processId: procs.length === 1 ? procs[0].id : "",
+                      assignedToId: "",
                     });
                   }}
                 >
@@ -194,7 +241,9 @@ function NewTaskContent() {
                   className="bb-select"
                   value={newTask.processId}
                   disabled={!newTask.projectId || newTaskProcesses.length === 0}
-                  onChange={(e) => setNewTask({ ...newTask, processId: e.target.value })}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, processId: e.target.value, assignedToId: "" })
+                  }
                 >
                   <option value="">
                     {!newTask.projectId
@@ -299,9 +348,12 @@ function NewTaskContent() {
                 <select
                   className="bb-select"
                   value={newTask.assignedToId}
+                  disabled={!newTask.processId}
                   onChange={(e) => setNewTask({ ...newTask, assignedToId: e.target.value })}
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">
+                    {!newTask.processId ? "Select a process first" : "Unassigned"}
+                  </option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.username})

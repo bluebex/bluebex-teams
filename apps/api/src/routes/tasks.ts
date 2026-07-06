@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@bluebex/db";
 import type { Prisma } from "@prisma/client";
 import { requireAuth, type AuthedRequest } from "../lib/auth.js";
-import { accessibleProcessIds, accessibleProjectsWithProcesses, canAccessProcess } from "../lib/access.js";
+import { accessibleProcessIds, accessibleProjectsWithProcesses, assignableUsersForProcesses, canAccessProcess, canUserBeAssignedToProcess } from "../lib/access.js";
 import { generateUniqueTaskPublicId, taskWhereFromParam } from "../lib/taskPublicId.js";
 import { resolveHotlistInternalIds } from "../lib/hotlistId.js";
 
@@ -146,6 +146,8 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
       category: z.enum(["TASK", "BUG"]).optional(),
       view: z.enum(["assigned", "created"]).optional(),
       hotlistId: z.string().regex(/^\d{6}$/).optional(),
+      eta: z.string().date().optional(),
+      etaIsNull: z.enum(["true"]).optional(),
       page: z.coerce.number().int().min(1).default(1),
       pageSize: z.coerce
         .number()
@@ -183,6 +185,12 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
 
   if (query.hotlistId) {
     where.hotlists = { some: { hotlist: { hotlistId: query.hotlistId } } };
+  }
+
+  if (query.etaIsNull === "true") {
+    where.eta = null;
+  } else if (query.eta) {
+    where.eta = etaToStored(query.eta);
   }
 
   if (query.view === "assigned") {
@@ -255,6 +263,13 @@ tasksRouter.post("/", async (req: AuthedRequest, res) => {
   const access = await canAccessProcess(req.user!.id, body.processId);
   if (!access.ok) return res.status(403).json({ error: access.reason });
 
+  if (body.assignedToId) {
+    const assignable = await canUserBeAssignedToProcess(body.assignedToId, body.processId);
+    if (!assignable) {
+      return res.status(400).json({ error: "Assignee does not have access to this process" });
+    }
+  }
+
   if (body.eta && isEtaBeforeToday(body.eta)) {
     return res.status(400).json({ error: "ETA cannot be before today" });
   }
@@ -311,13 +326,24 @@ tasksRouter.post("/", async (req: AuthedRequest, res) => {
 });
 
 tasksRouter.get("/meta", async (req: AuthedRequest, res) => {
+  const query = z
+    .object({
+      processId: z.string().optional(),
+    })
+    .parse(req.query);
+
+  const accessibleIds = await accessibleProcessIds(req.user!.id);
+  let targetProcessIds = accessibleIds;
+  if (query.processId) {
+    if (!accessibleIds.includes(query.processId)) {
+      return res.status(403).json({ error: "No access" });
+    }
+    targetProcessIds = [query.processId];
+  }
+
   const [projects, users, hotlists] = await Promise.all([
     accessibleProjectsWithProcesses(req.user!.id),
-    prisma.user.findMany({
-      where: { role: "USER" },
-      orderBy: { name: "asc" },
-      select: { id: true, username: true, name: true },
-    }),
+    assignableUsersForProcesses(targetProcessIds),
     prisma.hotlist.findMany({
       orderBy: { name: "asc" },
       select: hotlistPublicSelect,
@@ -398,6 +424,13 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
 
   const processIds = await accessibleProcessIds(req.user!.id);
   if (!processIds.includes(existing.processId)) return res.status(403).json({ error: "No access" });
+
+  if (body.assignedToId) {
+    const assignable = await canUserBeAssignedToProcess(body.assignedToId, existing.processId);
+    if (!assignable) {
+      return res.status(400).json({ error: "Assignee does not have access to this process" });
+    }
+  }
 
   const updates: Prisma.TaskUpdateInput = {
     ...(body.title ? { title: body.title } : {}),

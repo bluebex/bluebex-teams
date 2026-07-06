@@ -9,6 +9,7 @@ import { PriorityBadge } from "@/components/PriorityBadge";
 import { Pagination } from "@/components/Pagination";
 import { MultiSelect } from "@/components/MultiSelect";
 import { HotlistFilterSelect } from "@/components/HotlistFilterSelect";
+import { DatePicker } from "@/components/DatePicker";
 import {
   OPEN_TASK_STATUSES,
   TASK_STATUS_OPTIONS,
@@ -44,6 +45,8 @@ type TaskPagination = {
   total: number;
   totalPages: number;
 };
+
+type EtaFilterMode = "" | "none" | "date";
 
 export type TaskListViewProps = {
   fixedCategory?: TaskCategory;
@@ -112,6 +115,8 @@ export function TaskListView({
   const [assignedToId, setAssignedToId] = useState("");
   const [projectId, setProjectId] = useState(urlProjectId);
   const [hotlistId, setHotlistId] = useState(urlHotlistId);
+  const [etaMode, setEtaMode] = useState<EtaFilterMode>("");
+  const [etaDate, setEtaDate] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<TaskPagination>({
@@ -135,11 +140,13 @@ export function TaskListView({
     if (assignedToId) p.set("assignedToId", assignedToId);
     if (projectId) p.set("projectId", projectId);
     if (hotlistId) p.set("hotlistId", hotlistId);
+    if (etaMode === "none") p.set("etaIsNull", "true");
+    else if (etaMode === "date" && etaDate) p.set("eta", etaDate);
     if (search.trim()) p.set("search", search.trim());
     p.set("page", String(page));
     p.set("pageSize", String(TASKS_PAGE_SIZE));
     return `?${p.toString()}`;
-  }, [view, fixedCategory, selectedStatuses, assignedToId, projectId, hotlistId, search, page]);
+  }, [view, fixedCategory, selectedStatuses, assignedToId, projectId, hotlistId, etaMode, etaDate, search, page]);
 
   const loadCurrentUser = useCallback(async () => {
     const res = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
@@ -214,7 +221,14 @@ export function TaskListView({
     selectedStatuses.length < TASK_STATUS_OPTIONS.length;
 
   const hasFilters = Boolean(
-    isStatusFiltered || assignedToId || projectId || hotlistId || search.trim() || view,
+    isStatusFiltered ||
+      assignedToId ||
+      projectId ||
+      hotlistId ||
+      etaMode === "none" ||
+      (etaMode === "date" && etaDate) ||
+      search.trim() ||
+      view,
   );
 
   const handleStatusChange = (statuses: TaskStatus[]) => {
@@ -280,6 +294,49 @@ export function TaskListView({
               </select>
             </label>
 
+            <HotlistFilterSelect
+              hotlists={hotlists}
+              value={hotlistId}
+              onChange={(next) => {
+                setHotlistId(next);
+                setPage(1);
+              }}
+              onHotlistCreated={(hotlist) => {
+                setHotlists((prev) =>
+                  [...prev, hotlist].sort((a, b) => a.name.localeCompare(b.name)),
+                );
+              }}
+            />
+
+            <div className="bb-task-filter-field">
+              <span className="bb-admin-label">ETA</span>
+              <select
+                className="bb-select"
+                value={etaMode}
+                onChange={(e) => {
+                  const next = e.target.value as EtaFilterMode;
+                  setEtaMode(next);
+                  if (next !== "date") setEtaDate("");
+                  setPage(1);
+                }}
+              >
+                <option value="">All</option>
+                <option value="none">No ETA</option>
+                <option value="date">On date</option>
+              </select>
+              {etaMode === "date" ? (
+                <DatePicker
+                  value={etaDate}
+                  allowAnyDate
+                  placeholder="Pick date"
+                  onChange={(next) => {
+                    setEtaDate(next ?? "");
+                    setPage(1);
+                  }}
+                />
+              ) : null}
+            </div>
+
             <label className="bb-task-filter-field">
               <span className="bb-admin-label">Project</span>
               <select
@@ -298,20 +355,6 @@ export function TaskListView({
                 ))}
               </select>
             </label>
-
-            <HotlistFilterSelect
-              hotlists={hotlists}
-              value={hotlistId}
-              onChange={(next) => {
-                setHotlistId(next);
-                setPage(1);
-              }}
-              onHotlistCreated={(hotlist) => {
-                setHotlists((prev) =>
-                  [...prev, hotlist].sort((a, b) => a.name.localeCompare(b.name)),
-                );
-              }}
-            />
           </div>
         </div>
 

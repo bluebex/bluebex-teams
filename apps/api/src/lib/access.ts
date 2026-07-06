@@ -82,3 +82,68 @@ export async function accessibleProjectsWithProcesses(userId: string) {
   return [...byProject.values()];
 }
 
+export async function canUserBeAssignedToProcess(userId: string, processId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  if (!user || user.role !== "USER") return false;
+
+  const process = await prisma.process.findUnique({
+    where: { id: processId },
+    select: { projectId: true },
+  });
+  if (!process) return false;
+
+  const [projectMember, processMember] = await Promise.all([
+    prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId: process.projectId, userId } },
+      select: { userId: true },
+    }),
+    prisma.processMember.findUnique({
+      where: { processId_userId: { processId, userId } },
+      select: { userId: true },
+    }),
+  ]);
+
+  return Boolean(projectMember || processMember);
+}
+
+export async function assignableUsersForProcesses(processIds: string[]) {
+  if (processIds.length === 0) return [];
+
+  const processes = await prisma.process.findMany({
+    where: { id: { in: processIds } },
+    select: { id: true, projectId: true },
+  });
+  if (processes.length === 0) return [];
+
+  const projectIds = [...new Set(processes.map((p) => p.projectId))];
+  const scopedProcessIds = processes.map((p) => p.id);
+
+  const [projectMembers, processMembers] = await Promise.all([
+    prisma.projectMember.findMany({
+      where: { projectId: { in: projectIds } },
+      select: { userId: true },
+    }),
+    prisma.processMember.findMany({
+      where: { processId: { in: scopedProcessIds } },
+      select: { userId: true },
+    }),
+  ]);
+
+  const userIds = [
+    ...new Set([
+      ...projectMembers.map((m) => m.userId),
+      ...processMembers.map((m) => m.userId),
+    ]),
+  ];
+  if (userIds.length === 0) return [];
+
+  return prisma.user.findMany({
+    where: { id: { in: userIds }, role: "USER" },
+    orderBy: { name: "asc" },
+    select: { id: true, username: true, name: true },
+  });
+}
+
