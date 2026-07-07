@@ -16,7 +16,8 @@ enum TaskStatus {
   TODO
   IN_PROGRESS
   DONE
-  INFEASIBLE
+  WONT_FIX_INFEASIBLE
+  WONT_FIX_OBSOLETE
 }
 
 enum TaskPriority {

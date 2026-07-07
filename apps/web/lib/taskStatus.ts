@@ -1,10 +1,16 @@
-export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "INFEASIBLE";
+export type TaskStatus =
+  | "TODO"
+  | "IN_PROGRESS"
+  | "DONE"
+  | "WONT_FIX_INFEASIBLE"
+  | "WONT_FIX_OBSOLETE";
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "To do",
   IN_PROGRESS: "In progress",
   DONE: "Done",
-  INFEASIBLE: "Infeasible",
+  WONT_FIX_INFEASIBLE: "Won't Fix (Infeasible)",
+  WONT_FIX_OBSOLETE: "Won't Fix (Obsolete)",
 };
 
 export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = (
@@ -13,6 +19,14 @@ export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = (
   value,
   label: TASK_STATUS_LABELS[value],
 }));
+
+export const WONT_FIX_STATUSES: TaskStatus[] = [
+  "WONT_FIX_INFEASIBLE",
+  "WONT_FIX_OBSOLETE",
+];
+
+/** Terminal statuses excluded from the default assigned-to-me list. */
+export const CLOSED_TASK_STATUSES: TaskStatus[] = ["DONE", ...WONT_FIX_STATUSES];
 
 /** Default open statuses for assigned and bugs lists. */
 export const OPEN_TASK_STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS"];
@@ -36,9 +50,15 @@ export function statusBadgeUsesUnassignedStyle(
   return !assignedTo && UNASSIGNED_DISPLAY_STATUSES.includes(status);
 }
 
+export function statusBadgeClass(status: TaskStatus): string {
+  if (WONT_FIX_STATUSES.includes(status)) return "bb-status-badge--wont-fix";
+  return `bb-status-badge--${status.toLowerCase()}`;
+}
+
 /** Legacy status values kept for old log rows after enum migrations. */
 const LEGACY_STATUS_LABELS: Record<string, string> = {
-  BLOCKED: "Done",
+  BLOCKED: "Won't Fix (Infeasible)",
+  INFEASIBLE: "Won't Fix (Infeasible)",
 };
 
 export function formatTaskStatusLogLabel(status: string | null): string {

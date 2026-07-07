@@ -184,7 +184,7 @@ body {
   border-color: #86efac;
 }
 
-.bb-status-badge--infeasible {
+.bb-status-badge--wont-fix {
   color: #737373;
   border-color: #a3a3a3;
   background: #f5f5f5;
