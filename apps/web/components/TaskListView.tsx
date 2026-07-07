@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
@@ -99,6 +99,7 @@ export function TaskListView({
   errorMessage = "Failed to load tasks",
   defaultSelectedStatuses = NO_DEFAULT_STATUSES,
 }: TaskListViewProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const view = fixedCategory ? "" : (searchParams.get("view") ?? "");
   const urlProjectId = searchParams.get("projectId") ?? "";
@@ -106,6 +107,7 @@ export function TaskListView({
   const urlHotlistId = searchParams.get("hotlistId") ?? "";
   const defaultStatusesRef = useRef(defaultSelectedStatuses);
   defaultStatusesRef.current = defaultSelectedStatuses;
+  const prevViewRef = useRef(view);
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [tasks, setTasks] = useState<TaskLite[]>([]);
@@ -116,6 +118,7 @@ export function TaskListView({
     resolveDefaultStatuses(view, defaultSelectedStatuses),
   );
   const [assignedToId, setAssignedToId] = useState("");
+  const [createdById, setCreatedById] = useState("");
   const [projectId, setProjectId] = useState(urlProjectId);
   const [processId, setProcessId] = useState(urlProcessId);
   const [priority, setPriority] = useState<TaskPriority | "">("");
@@ -144,6 +147,7 @@ export function TaskListView({
       p.set("statusIn", selectedStatuses.join(","));
     }
     if (assignedToId) p.set("assignedToId", assignedToId);
+    if (createdById && view !== "created") p.set("createdById", createdById);
     if (projectId) p.set("projectId", projectId);
     if (processId) p.set("processId", processId);
     if (priority) p.set("priority", priority);
@@ -155,7 +159,7 @@ export function TaskListView({
     p.set("page", String(page));
     p.set("pageSize", String(TASKS_PAGE_SIZE));
     return `?${p.toString()}`;
-  }, [view, fixedCategory, selectedStatuses, assignedToId, projectId, processId, priority, category, hotlistId, etaMode, etaDate, search, page]);
+  }, [view, fixedCategory, selectedStatuses, assignedToId, createdById, projectId, processId, priority, category, hotlistId, etaMode, etaDate, search, page]);
 
   const processOptions = useMemo((): ProcessOption[] => {
     if (!projectId) return [];
@@ -227,21 +231,34 @@ export function TaskListView({
   }, [view, fixedCategory, urlProjectId, urlProcessId, urlHotlistId]);
 
   useEffect(() => {
-    if (view === "assigned" && currentUser) {
-      setAssignedToId(currentUser.id);
+    const prevView = prevViewRef.current;
+    if (prevView !== view) {
+      prevViewRef.current = view;
+      if (view === "assigned" && currentUser) {
+        setAssignedToId(currentUser.id);
+      } else if (prevView === "assigned" && currentUser) {
+        setAssignedToId((prev) => (prev === currentUser.id ? "" : prev));
+      }
+      if (view === "created" && currentUser) {
+        setCreatedById(currentUser.id);
+      } else if (prevView === "created" && currentUser) {
+        setCreatedById((prev) => (prev === currentUser.id ? "" : prev));
+      }
       return;
     }
-    if (view !== "assigned" && currentUser) {
-      setAssignedToId((prev) => (prev === currentUser.id ? "" : prev));
+    if (view === "assigned" && currentUser) {
+      setAssignedToId((prev) => prev || currentUser.id);
+    }
+    if (view === "created" && currentUser) {
+      setCreatedById((prev) => prev || currentUser.id);
     }
   }, [view, currentUser]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setError(null);
       try {
-        await Promise.all([loadCurrentUser(), loadTasks(), loadUsers()]);
+        await Promise.all([loadCurrentUser(), loadUsers()]);
       } catch {
         if (!cancelled) setError(errorMessage);
       }
@@ -249,7 +266,22 @@ export function TaskListView({
     return () => {
       cancelled = true;
     };
-  }, [loadCurrentUser, loadTasks, loadUsers, errorMessage]);
+  }, [loadCurrentUser, loadUsers, errorMessage]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setError(null);
+      try {
+        await loadTasks();
+      } catch {
+        if (!cancelled) setError(errorMessage);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadTasks, errorMessage]);
 
   const pageTitle =
     pageTitleProp ?? (fixedCategory === "BUG" ? "Bugs" : VIEW_TITLES[view] ?? "Tasks");
@@ -273,6 +305,7 @@ export function TaskListView({
   const hasFilters = Boolean(
     isStatusFiltered ||
       assignedToId ||
+      createdById ||
       projectId ||
       processId ||
       priority ||
@@ -354,8 +387,49 @@ export function TaskListView({
                   className="bb-select"
                   value={assignedToId}
                   onChange={(e) => {
-                    setAssignedToId(e.target.value);
+                    const nextId = e.target.value;
                     setPage(1);
+                    if (view === "assigned") {
+                      setAssignedToId(nextId);
+                      const params = new URLSearchParams(window.location.search);
+                      params.delete("view");
+                      if (nextId) params.set("assignedToId", nextId);
+                      else params.delete("assignedToId");
+                      const nextQs = params.toString();
+                      router.replace(nextQs ? `/?${nextQs}` : "/");
+                      return;
+                    }
+                    setAssignedToId(nextId);
+                  }}
+                >
+                  <option value="">Anyone</option>
+                  {assigneeOptions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="bb-task-filter-field">
+                <span className="bb-admin-label">Created by</span>
+                <select
+                  className="bb-select"
+                  value={createdById}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    setPage(1);
+                    if (view === "created") {
+                      setCreatedById(nextId);
+                      const params = new URLSearchParams(window.location.search);
+                      params.delete("view");
+                      if (nextId) params.set("createdById", nextId);
+                      else params.delete("createdById");
+                      const nextQs = params.toString();
+                      router.replace(nextQs ? `/?${nextQs}` : "/");
+                      return;
+                    }
+                    setCreatedById(nextId);
                   }}
                 >
                   <option value="">Anyone</option>
