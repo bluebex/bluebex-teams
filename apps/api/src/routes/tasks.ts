@@ -146,7 +146,6 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
       search: z.string().optional(),
       category: z.enum(["TASK", "BUG"]).optional(),
       view: z.enum(["assigned", "created"]).optional(),
-      createdById: z.string().optional(),
       hotlistId: z.string().regex(/^\d{6}$/).optional(),
       eta: z.string().date().optional(),
       etaIsNull: z.enum(["true"]).optional(),
@@ -215,7 +214,6 @@ tasksRouter.get("/", async (req: AuthedRequest, res) => {
     if (query.assignedToId) where.assignedToId = query.assignedToId;
   } else {
     if (query.assignedToId) where.assignedToId = query.assignedToId;
-    if (query.createdById) where.createdById = query.createdById;
     if (query.status) where.status = query.status;
     else if (statusIn?.length) where.status = { in: statusIn };
   }
