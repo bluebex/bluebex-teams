@@ -313,6 +313,57 @@ body {
   border-bottom: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
 }
 
+.bb-comment-body-editable {
+  cursor: text;
+  border-radius: 0.25rem;
+}
+
+.bb-comment-body-editable:hover {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+.bb-comment-edited-link {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.bb-comment-edited-link:hover {
+  color: var(--foreground);
+}
+
+.bb-comment-edit-form {
+  margin-top: 0.35rem;
+}
+
+.bb-comment-edit-history-entry {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+
+.bb-comment-edit-history-entry:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.bb-comment-edit-history-diff {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .bb-comment-edit-history-diff {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.bb-comment-edit-history-side {
+  min-width: 0;
+}
+
 .bb-comment-block:last-child {
   border-bottom: none;
 }

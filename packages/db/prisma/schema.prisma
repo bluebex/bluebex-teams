@@ -43,8 +43,9 @@ model User {
   sessions      Session[]
   createdTasks  Task[]  @relation("TaskCreatedBy")
   assignedTasks Task[]  @relation("TaskAssignedTo")
-  comments      Comment[]
-  statusLogs    TaskStatusLog[]
+  comments         Comment[]
+  commentEditLogs  CommentEditLog[]
+  statusLogs       TaskStatusLog[]
   changeLogs    TaskChangeLog[]
   projectLinks  ProjectMember[]
   processLinks  ProcessMember[]
@@ -159,12 +160,28 @@ model Comment {
   userId    String
   body      String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  task     Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  editLogs CommentEditLog[]
 
   @@index([taskId])
   @@index([userId])
+}
+
+model CommentEditLog {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  fromBody  String
+  toBody    String
+  editedAt  DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([commentId])
 }
 
 model TaskStatusLog {

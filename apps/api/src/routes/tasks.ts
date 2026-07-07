@@ -370,7 +370,10 @@ tasksRouter.get("/:id", async (req: AuthedRequest, res) => {
       project: { select: { id: true, name: true } },
       comments: {
         orderBy: { createdAt: "asc" },
-        include: { user: { select: { id: true, username: true, name: true } } },
+        include: {
+          user: { select: { id: true, username: true, name: true } },
+          editLogs: { orderBy: { editedAt: "asc" } },
+        },
       },
       statusLogs: {
         orderBy: { createdAt: "asc" },
@@ -581,6 +584,73 @@ tasksRouter.patch("/:id", async (req: AuthedRequest, res) => {
     }
     console.error("PATCH /tasks/:id failed:", err);
     return res.status(500).json({ error: "Failed to update task" });
+  }
+});
+
+tasksRouter.patch("/:id/comments/:commentId", async (req: AuthedRequest, res) => {
+  try {
+    const param = z.string().parse(req.params.id);
+    const commentId = z.string().parse(req.params.commentId);
+    const body = z.object({ body: z.string().min(1) }).parse(req.body);
+
+    const task = await prisma.task.findUnique({
+      where: taskWhereFromParam(param),
+      select: { id: true, processId: true },
+    });
+    if (!task) return res.status(404).json({ error: "Not found" });
+
+    const processIds = await accessibleProcessIds(req.user!.id);
+    if (!processIds.includes(task.processId)) return res.status(403).json({ error: "No access" });
+
+    const existing = await prisma.comment.findFirst({
+      where: { id: commentId, taskId: task.id },
+      select: { id: true, userId: true, body: true },
+    });
+    if (!existing) return res.status(404).json({ error: "Comment not found" });
+    if (existing.userId !== req.user!.id) {
+      return res.status(403).json({ error: "You can only edit your own comments" });
+    }
+
+    const nextBody = body.body.trim();
+    if (!nextBody) return res.status(400).json({ error: "Comment cannot be empty" });
+
+    if (nextBody === existing.body) {
+      const comment = await prisma.comment.findUnique({
+        where: { id: commentId },
+        include: {
+          user: { select: { id: true, username: true, name: true } },
+          editLogs: { orderBy: { editedAt: "asc" } },
+        },
+      });
+      return res.json({ comment });
+    }
+
+    const comment = await prisma.$transaction(async (tx) => {
+      await tx.commentEditLog.create({
+        data: {
+          commentId: existing.id,
+          userId: req.user!.id,
+          fromBody: existing.body,
+          toBody: nextBody,
+        },
+      });
+      return tx.comment.update({
+        where: { id: commentId },
+        data: { body: nextBody },
+        include: {
+          user: { select: { id: true, username: true, name: true } },
+          editLogs: { orderBy: { editedAt: "asc" } },
+        },
+      });
+    });
+
+    res.json({ comment });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.issues[0]?.message ?? "Invalid request" });
+    }
+    console.error("PATCH /tasks/:id/comments/:commentId failed:", err);
+    return res.status(500).json({ error: "Failed to update comment" });
   }
 });
 

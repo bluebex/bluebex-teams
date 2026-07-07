@@ -8,8 +8,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { TaskPublicId } from "@/components/TaskPublicId";
-import { CommentBody } from "@/components/CommentBody";
 import { CommentMentionInput } from "@/components/CommentMentionInput";
+import { TaskCommentBlock } from "@/components/TaskCommentBlock";
 import { DatePicker } from "@/components/DatePicker";
 import {
   formatTaskStatusLogLabel,
@@ -38,6 +38,12 @@ import {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 type UserLite = { id: string; username: string; name: string };
+type CommentEditLog = {
+  id: string;
+  fromBody: string;
+  toBody: string;
+  editedAt: string;
+};
 type Task = {
   id: string;
   publicId: string;
@@ -53,7 +59,13 @@ type Task = {
   assignedTo: UserLite | null;
   project: { id: string; name: string };
   process: { id: string; name: string };
-  comments: { id: string; body: string; createdAt: string; user: UserLite }[];
+  comments: {
+    id: string;
+    body: string;
+    createdAt: string;
+    user: UserLite;
+    editLogs: CommentEditLog[];
+  }[];
   statusLogs: {
     id: string;
     fromStatus: TaskStatus | null;
@@ -93,6 +105,7 @@ export default function TaskPage() {
   const rawParam = typeof params.publicId === "string" ? params.publicId : "";
   const publicId = normalizeTaskPublicId(rawParam);
   const [task, setTask] = useState<Task | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserLite | null>(null);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [hotlists, setHotlists] = useState<HotlistLite[]>([]);
   const [selectedHotlistIds, setSelectedHotlistIds] = useState<string[]>([]);
@@ -127,12 +140,19 @@ export default function TaskPage() {
       const metaUrl = loadedTask.process?.id
         ? `${API_URL}/tasks/meta?processId=${encodeURIComponent(loadedTask.process.id)}`
         : `${API_URL}/tasks/meta`;
-      const metaRes = await fetch(metaUrl, { credentials: "include" });
-      if (metaRes.status === 401) return (window.location.href = "/login");
+      const [metaRes, meRes] = await Promise.all([
+        fetch(metaUrl, { credentials: "include" }),
+        fetch(`${API_URL}/auth/me`, { credentials: "include" }),
+      ]);
+      if (metaRes.status === 401 || meRes.status === 401) return (window.location.href = "/login");
       if (metaRes.ok) {
         const metaData = await metaRes.json();
         setUsers(metaData.users || []);
         setHotlists(metaData.hotlists || []);
+      }
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.user) setCurrentUser(meData.user);
       }
     },
     [publicId],
@@ -290,6 +310,7 @@ export default function TaskPage() {
         createdAt: c.createdAt,
         user: c.user,
         body: c.body,
+        editLogs: c.editLogs,
       })),
       ...task.statusLogs.map((l) => ({
         kind: "status" as const,
@@ -607,55 +628,74 @@ export default function TaskPage() {
               {activity.length === 0 ? (
                 <p className="bb-admin-cell-empty">No comments or status changes yet.</p>
               ) : (
-                activity.map((item) => (
-                  <div key={`${item.kind}-${item.id}`} className="bb-comment-block">
-                    <div className="bb-admin-cell-sub mb-1">
-                      {item.user.name} • {formatDateTime(item.createdAt)}
-                      {item.kind === "change"
-                        ? ` · ${formatChangeFieldLabel(item.field)}`
-                        : null}
+                activity.map((item) => {
+                  if (item.kind === "comment") {
+                    return (
+                      <TaskCommentBlock
+                        key={`${item.kind}-${item.id}`}
+                        commentId={item.id}
+                        taskPublicId={publicId}
+                        body={item.body}
+                        createdAt={item.createdAt}
+                        user={item.user}
+                        editLogs={item.editLogs}
+                        users={users}
+                        canEdit={currentUser?.id === item.user.id}
+                        onUpdated={async () => {
+                          await refresh();
+                        }}
+                      />
+                    );
+                  }
+
+                  return (
+                    <div key={`${item.kind}-${item.id}`} className="bb-comment-block">
+                      <div className="bb-admin-cell-sub mb-1">
+                        {item.user.name} • {formatDateTime(item.createdAt)}
+                        {item.kind === "change"
+                          ? ` · ${formatChangeFieldLabel(item.field)}`
+                          : null}
+                      </div>
+                      {item.kind === "status" ? (
+                        <p className="text-sm bb-admin-cell-secondary">
+                          {formatTaskStatusLogLabel(item.fromStatus)} →{" "}
+                          {formatTaskStatusLogLabel(item.toStatus)}
+                        </p>
+                      ) : item.field === "priority" ? (
+                        <p className="text-sm bb-admin-cell-secondary">
+                          {formatTaskPriorityLogLabel(item.fromValue)} →{" "}
+                          {formatTaskPriorityLogLabel(item.toValue)}
+                        </p>
+                      ) : item.field === "category" ? (
+                        <p className="text-sm bb-admin-cell-secondary">
+                          {formatTaskCategoryLogLabel(item.fromValue)} →{" "}
+                          {formatTaskCategoryLogLabel(item.toValue)}
+                        </p>
+                      ) : item.field === "eta" ? (
+                        <p className="text-sm bb-admin-cell-secondary">
+                          {formatTaskEtaLogLabel(item.fromValue)} →{" "}
+                          {formatTaskEtaLogLabel(item.toValue)}
+                        </p>
+                      ) : item.field === "description" ? (
+                        <p className="text-sm bb-admin-cell-secondary bb-preserve-lines">
+                          {formatChangeText(item.fromValue)}
+                          {formatChangeText(item.fromValue) ? " → " : "→ "}
+                          {formatChangeText(item.toValue)}
+                        </p>
+                      ) : item.field === "hotlist_add" || item.field === "hotlist_remove" ? (
+                        <p className="text-sm bb-admin-cell-secondary">
+                          {formatHotlistChangeLogText(item.field, item.fromValue, item.toValue)}
+                        </p>
+                      ) : (
+                        <p className="text-sm bb-admin-cell-secondary">
+                          {formatChangeText(item.fromValue)}
+                          {formatChangeText(item.fromValue) ? " → " : "→ "}
+                          {formatChangeText(item.toValue)}
+                        </p>
+                      )}
                     </div>
-                    {item.kind === "comment" ? (
-                      <CommentBody body={item.body} users={users} />
-                    ) : item.kind === "status" ? (
-                      <p className="text-sm bb-admin-cell-secondary">
-                        {formatTaskStatusLogLabel(item.fromStatus)} →{" "}
-                        {formatTaskStatusLogLabel(item.toStatus)}
-                      </p>
-                    ) : item.field === "priority" ? (
-                      <p className="text-sm bb-admin-cell-secondary">
-                        {formatTaskPriorityLogLabel(item.fromValue)} →{" "}
-                        {formatTaskPriorityLogLabel(item.toValue)}
-                      </p>
-                    ) : item.field === "category" ? (
-                      <p className="text-sm bb-admin-cell-secondary">
-                        {formatTaskCategoryLogLabel(item.fromValue)} →{" "}
-                        {formatTaskCategoryLogLabel(item.toValue)}
-                      </p>
-                    ) : item.field === "eta" ? (
-                      <p className="text-sm bb-admin-cell-secondary">
-                        {formatTaskEtaLogLabel(item.fromValue)} →{" "}
-                        {formatTaskEtaLogLabel(item.toValue)}
-                      </p>
-                    ) : item.field === "description" ? (
-                      <p className="text-sm bb-admin-cell-secondary bb-preserve-lines">
-                        {formatChangeText(item.fromValue)}
-                        {formatChangeText(item.fromValue) ? " → " : "→ "}
-                        {formatChangeText(item.toValue)}
-                      </p>
-                    ) : item.field === "hotlist_add" || item.field === "hotlist_remove" ? (
-                      <p className="text-sm bb-admin-cell-secondary">
-                        {formatHotlistChangeLogText(item.field, item.fromValue, item.toValue)}
-                      </p>
-                    ) : (
-                      <p className="text-sm bb-admin-cell-secondary">
-                        {formatChangeText(item.fromValue)}
-                        {formatChangeText(item.fromValue) ? " → " : "→ "}
-                        {formatChangeText(item.toValue)}
-                      </p>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
             <div className="bb-admin-list-box-footer">
