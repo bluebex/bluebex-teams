@@ -1,4 +1,6 @@
 -- Replace INFEASIBLE with expanded Won't Fix statuses
+DROP TYPE IF EXISTS "TaskStatus_new";
+
 CREATE TYPE "TaskStatus_new" AS ENUM (
   'TODO',
   'IN_PROGRESS',
@@ -7,6 +9,7 @@ CREATE TYPE "TaskStatus_new" AS ENUM (
   'WONT_FIX_OBSOLETE'
 );
 
+ALTER TABLE "Task" ALTER COLUMN "status" DROP DEFAULT;
 ALTER TABLE "Task" ALTER COLUMN "status" TYPE "TaskStatus_new" USING (
   CASE "status"::text
     WHEN 'INFEASIBLE' THEN 'WONT_FIX_INFEASIBLE'::"TaskStatus_new"

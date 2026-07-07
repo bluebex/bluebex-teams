@@ -205,12 +205,21 @@ export default function TaskPage() {
   }
 
   async function updateStatus(next: TaskStatus) {
-    await fetch(`${API_URL}/tasks/${publicId}`, {
+    const previous = task?.status ?? status;
+    setStatus(next);
+    const res = await fetch(`${API_URL}/tasks/${publicId}`, {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: next }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setStatus(previous);
+      setError(data?.error || "Failed to update status");
+      return;
+    }
+    setError(null);
     await refresh();
   }
 
@@ -384,9 +393,7 @@ export default function TaskPage() {
                 className="bb-select bb-select--inline"
                 value={status}
                 onChange={(e) => {
-                  const next = e.target.value as TaskStatus;
-                  setStatus(next);
-                  updateStatus(next);
+                  void updateStatus(e.target.value as TaskStatus);
                 }}
               >
                 {TASK_STATUS_OPTIONS.map((opt) => (

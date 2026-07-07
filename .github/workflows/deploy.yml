@@ -42,6 +42,7 @@ jobs:
             git pull origin main
             npm ci
             npx prisma generate --schema packages/db/prisma/schema.prisma
+            npx prisma migrate resolve --rolled-back 20260707110000_expand_wont_fix_statuses --schema packages/db/prisma/schema.prisma 2>/dev/null || true
             npx prisma migrate deploy --schema packages/db/prisma/schema.prisma
             cd /opt/bluebex-teams/apps/api && npx tsc
             cd /opt/bluebex-teams/apps/web && NEXT_PUBLIC_API_URL="https://teams.bluebex.com/api" npx next build
