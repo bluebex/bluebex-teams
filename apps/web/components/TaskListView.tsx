@@ -166,6 +166,14 @@ export function TaskListView({
     }));
   }, [projects, projectId]);
 
+  const assigneeOptions = useMemo(() => {
+    const options = [...users];
+    if (currentUser && !options.some((u) => u.id === currentUser.id)) {
+      options.push(currentUser);
+    }
+    return options.sort((a, b) => a.name.localeCompare(b.name));
+  }, [users, currentUser]);
+
   useEffect(() => {
     if (!projectId && processId) {
       setProcessId("");
@@ -217,6 +225,16 @@ export function TaskListView({
     setHotlistId(urlHotlistId);
     setPage(1);
   }, [view, fixedCategory, urlProjectId, urlProcessId, urlHotlistId]);
+
+  useEffect(() => {
+    if (view === "assigned" && currentUser) {
+      setAssignedToId(currentUser.id);
+      return;
+    }
+    if (view !== "assigned" && currentUser) {
+      setAssignedToId((prev) => (prev === currentUser.id ? "" : prev));
+    }
+  }, [view, currentUser]);
 
   useEffect(() => {
     let cancelled = false;
@@ -341,7 +359,7 @@ export function TaskListView({
                   }}
                 >
                   <option value="">Anyone</option>
-                  {users.map((u) => (
+                  {assigneeOptions.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}
                     </option>
