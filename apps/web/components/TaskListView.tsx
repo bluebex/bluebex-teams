@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
@@ -100,6 +100,7 @@ export function TaskListView({
   defaultSelectedStatuses = NO_DEFAULT_STATUSES,
 }: TaskListViewProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const view = fixedCategory ? "" : (searchParams.get("view") ?? "");
   const urlProjectId = searchParams.get("projectId") ?? "";
@@ -298,7 +299,8 @@ export function TaskListView({
     if (nextId) params.set("assignedToId", nextId);
     else params.delete("assignedToId");
     const nextQs = params.toString();
-    router.replace(nextQs ? `/?${nextQs}` : "/");
+    const basePath = pathname || "/";
+    router.replace(nextQs ? `${basePath}?${nextQs}` : basePath);
   };
 
   const handleStatusChange = (statuses: TaskStatus[]) => {
