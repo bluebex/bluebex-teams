@@ -24,5 +24,6 @@ export function formatHotlistChangeLogText(
 
 export function formatChangeFieldLabel(field: string): string {
   if (field === "hotlist_add" || field === "hotlist_remove") return "hotlist";
+  if (field === "assignedTo") return "Assignee";
   return field;
 }

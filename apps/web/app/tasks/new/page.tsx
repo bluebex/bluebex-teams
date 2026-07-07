@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { DatePicker } from "@/components/DatePicker";
@@ -31,12 +31,20 @@ function NewTaskContent() {
   const prePriority = parseTaskPriority(searchParams.get("priority"));
   const preCategory = parseTaskCategory(searchParams.get("category"));
   const preAssignedToId = searchParams.get("assignedToId") ?? "";
+  const preAssignedToName = searchParams.get("assignedToName") ?? "";
+  const preAssignedToUsername = searchParams.get("assignedToUsername") ?? "";
   const preHotlistIds = useMemo(() => {
     const raw = searchParams.get("hotlistIds") ?? "";
     if (!raw) return [];
     return raw.split(",").map((id) => id.trim()).filter((id) => /^\d{6}$/.test(id));
   }, [searchParams]);
   const isBugForm = preCategory === "BUG";
+  const initialPrefillRef = useRef({
+    processId: preProcessId,
+    assignedToId: preAssignedToId,
+    assignedToName: preAssignedToName,
+    assignedToUsername: preAssignedToUsername,
+  });
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [users, setUsers] = useState<UserLite[]>([]);
   const [hotlists, setHotlists] = useState<HotlistLite[]>([]);
@@ -46,15 +54,32 @@ function NewTaskContent() {
   const [submitting, setSubmitting] = useState(false);
 
   const [newTask, setNewTask] = useState({
-    projectId: "",
-    processId: "",
+    projectId: preProjectId,
+    processId: preProcessId,
     title: "",
     description: "",
-    assignedToId: "",
+    assignedToId: preAssignedToId,
     priority: prePriority ?? "P1",
     category: preCategory ?? "TASK",
     eta: "",
   });
+
+  const assigneeOptions = useMemo(() => {
+    const options = [...users];
+    const prefill = initialPrefillRef.current;
+    if (
+      prefill.assignedToId &&
+      prefill.assignedToName &&
+      !options.some((u) => u.id === prefill.assignedToId)
+    ) {
+      options.push({
+        id: prefill.assignedToId,
+        name: prefill.assignedToName,
+        username: prefill.assignedToUsername || prefill.assignedToName,
+      });
+    }
+    return options.sort((a, b) => a.name.localeCompare(b.name));
+  }, [users]);
 
   const newTaskProcesses = useMemo(() => {
     if (!newTask.projectId) return [];
@@ -102,16 +127,21 @@ function NewTaskContent() {
   const loadAssignableUsers = useCallback(async (processId: string) => {
     if (!processId) {
       setUsers([]);
-      return;
+      return [];
     }
     const res = await fetch(
       `${API_URL}/tasks/meta?processId=${encodeURIComponent(processId)}`,
       { credentials: "include" },
     );
-    if (res.status === 401) return (window.location.href = "/login");
+    if (res.status === 401) {
+      window.location.href = "/login";
+      return [];
+    }
     if (!res.ok) throw new Error("Failed to load assignees");
     const data = await res.json();
-    setUsers(data.users || []);
+    const loadedUsers: UserLite[] = data.users || [];
+    setUsers(loadedUsers);
+    return loadedUsers;
   }, []);
 
   useEffect(() => {
@@ -132,21 +162,32 @@ function NewTaskContent() {
       setUsers([]);
       return;
     }
+    const activeProcessId = newTask.processId;
+    let cancelled = false;
     (async () => {
       try {
-        await loadAssignableUsers(newTask.processId);
+        const loadedUsers = await loadAssignableUsers(activeProcessId);
+        if (cancelled) return;
+        const prefill = initialPrefillRef.current;
+        if (
+          prefill.assignedToId &&
+          activeProcessId === prefill.processId &&
+          (loadedUsers.some((u) => u.id === prefill.assignedToId) || prefill.assignedToName)
+        ) {
+          setNewTask((prev) =>
+            prev.processId === activeProcessId && prev.assignedToId !== prefill.assignedToId
+              ? { ...prev, assignedToId: prefill.assignedToId }
+              : prev,
+          );
+        }
       } catch {
-        setError("Failed to load assignees");
+        if (!cancelled) setError("Failed to load assignees");
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [newTask.processId, loadAssignableUsers]);
-
-  useEffect(() => {
-    if (!newTask.assignedToId) return;
-    if (!users.some((u) => u.id === newTask.assignedToId)) {
-      setNewTask((prev) => ({ ...prev, assignedToId: "" }));
-    }
-  }, [users, newTask.assignedToId]);
 
   async function createTask() {
     setError(null);
@@ -354,7 +395,7 @@ function NewTaskContent() {
                   <option value="">
                     {!newTask.processId ? "Select a process first" : "Unassigned"}
                   </option>
-                  {users.map((u) => (
+                  {assigneeOptions.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.username})
                     </option>

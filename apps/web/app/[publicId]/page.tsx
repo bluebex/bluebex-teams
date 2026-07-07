@@ -295,6 +295,7 @@ export default function TaskPage() {
           (l) =>
             l.field === "title" ||
             l.field === "description" ||
+            l.field === "assignedTo" ||
             l.field === "priority" ||
             l.field === "category" ||
             l.field === "eta" ||
@@ -325,7 +326,11 @@ export default function TaskPage() {
       priority: task.priority,
       category: task.category,
     });
-    if (task.assignedTo?.id) params.set("assignedToId", task.assignedTo.id);
+    if (task.assignedTo?.id) {
+      params.set("assignedToId", task.assignedTo.id);
+      params.set("assignedToName", task.assignedTo.name);
+      params.set("assignedToUsername", task.assignedTo.username);
+    }
     const hotlistIds = (task.hotlists || []).map((h) => h.hotlistId);
     if (hotlistIds.length > 0) params.set("hotlistIds", hotlistIds.join(","));
     return `/tasks/new?${params.toString()}`;
