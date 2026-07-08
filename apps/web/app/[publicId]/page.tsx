@@ -9,6 +9,7 @@ import { PriorityBadge } from "@/components/PriorityBadge";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { TaskPublicId } from "@/components/TaskPublicId";
 import { CommentMentionInput } from "@/components/CommentMentionInput";
+import { FormattedText } from "@/components/FormattedText";
 import { TaskCommentBlock } from "@/components/TaskCommentBlock";
 import { DatePicker } from "@/components/DatePicker";
 import {
@@ -517,7 +518,7 @@ export default function TaskPage() {
                   </div>
                 </div>
               ) : (
-                <p
+                <div
                   className="text-sm leading-relaxed bb-editable-text bb-preserve-lines"
                   onClick={() => {
                     setEditDesc(task.description ?? "");
@@ -525,8 +526,12 @@ export default function TaskPage() {
                   }}
                   title="Click to edit description"
                 >
-                  {task.description || "No description — click to add one."}
-                </p>
+                  {task.description ? (
+                    <FormattedText text={task.description} as="span" />
+                  ) : (
+                    "No description — click to add one."
+                  )}
+                </div>
               )}
               <div className="mt-10" />
               <div className="grid sm:grid-cols-2 gap-4 text-sm">
