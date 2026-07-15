@@ -6,6 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { CategoryBadge } from "@/components/CategoryBadge";
+import { TaskPublicId } from "@/components/TaskPublicId";
 import { Pagination } from "@/components/Pagination";
 import { MultiSelect } from "@/components/MultiSelect";
 import { HotlistFilterSelect } from "@/components/HotlistFilterSelect";
@@ -18,7 +20,8 @@ import {
 import { taskPath } from "@/lib/taskPublicId";
 import { TASK_PRIORITY_OPTIONS, type TaskPriority } from "@/lib/taskPriority";
 import { TASK_CATEGORY_OPTIONS, type TaskCategory } from "@/lib/taskCategory";
-import { type HotlistLite } from "@/lib/hotlist";
+import { formatTaskEta } from "@/lib/taskEta";
+import { formatHotlistLabel, type HotlistLite } from "@/lib/hotlist";
 import { isUnauthenticatedResponse, redirectToLogin } from "@/lib/authClient";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -33,11 +36,14 @@ type TaskLite = {
   title: string;
   status: TaskStatus;
   priority: TaskPriority;
+  category: TaskCategory;
+  eta: string | null;
   updatedAt: string;
   assignedTo: UserLite | null;
   createdBy: UserLite;
   project: { id: string; name: string };
   process: { id: string; name: string };
+  hotlists?: HotlistLite[];
 };
 
 type TaskPagination = {
@@ -78,13 +84,11 @@ function resolveDefaultStatuses(view: string, propDefaults: TaskStatus[]): TaskS
   return [];
 }
 
-function formatDate(value: string) {
+function formatUpdatedAt(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 
@@ -503,57 +507,95 @@ export function TaskListView({
         </div>
 
         <div className="bb-admin-list-box-body">
-          <table className="bb-admin-table">
-            <thead>
-              <tr>
-                <th>{itemLabel}</th>
-                <th>Project</th>
-                <th>Priority</th>
-                <th>Assignee</th>
-                <th>Status</th>
-                <th>Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="bb-admin-cell-empty">
-                    {hasFilters
-                      ? `No ${emptyLabel} match your filters.`
-                      : `No ${emptyLabel} yet.`}{" "}
-                    <Link className="bb-text-link" href={createHref}>
-                      Create one
-                    </Link>
-                  </td>
-                </tr>
-              ) : (
-                tasks.map((t) => (
-                  <tr key={t.id}>
-                    <td>
-                      <Link href={taskPath(t.publicId)} className="bb-admin-cell-primary hover:underline">
-                        {t.title}
-                      </Link>
-                      <span className="bb-admin-cell-sub">Created by {t.createdBy.name}</span>
-                    </td>
-                    <td>
-                      <span className="bb-admin-cell-primary">{t.project.name}</span>
-                      <span className="bb-admin-cell-sub">{t.process.name}</span>
-                    </td>
-                    <td>
-                      <PriorityBadge priority={t.priority} />
-                    </td>
-                    <td className="bb-admin-cell-secondary">
-                      {t.assignedTo ? t.assignedTo.name : "Unassigned"}
-                    </td>
-                    <td>
-                      <StatusBadge status={t.status} assignedTo={t.assignedTo} />
-                    </td>
-                    <td className="bb-admin-cell-date">{formatDate(t.updatedAt)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          {tasks.length === 0 ? (
+            <p className="bb-admin-cell-empty">
+              {hasFilters
+                ? `No ${emptyLabel} match your filters.`
+                : `No ${emptyLabel} yet.`}{" "}
+              <Link className="bb-text-link" href={createHref}>
+                Create one
+              </Link>
+            </p>
+          ) : (
+            <ul className="bb-task-list">
+              {tasks.map((t) => {
+                const href = taskPath(t.publicId);
+                const taskHotlists = t.hotlists ?? [];
+                return (
+                  <li
+                    key={t.id}
+                    className="bb-task-item"
+                    onClick={() => router.push(href)}
+                  >
+                    <div className="bb-task-item-main">
+                      <div className="bb-task-item-heading">
+                        <div className="bb-task-item-heading-text">
+                          <Link
+                            href={href}
+                            className="bb-task-item-title"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {t.title}
+                          </Link>
+                          <div
+                            className={`bb-task-item-assignee${
+                              t.assignedTo ? "" : " bb-task-item-assignee--empty"
+                            }`}
+                          >
+                            {t.assignedTo ? t.assignedTo.name : "Unassigned"}
+                          </div>
+                        </div>
+                        <div className="bb-task-item-badges">
+                          {!fixedCategory ? (
+                            <CategoryBadge category={t.category} />
+                          ) : null}
+                          <PriorityBadge priority={t.priority} />
+                          <StatusBadge status={t.status} assignedTo={t.assignedTo} />
+                        </div>
+                      </div>
+
+                      <div className="bb-task-item-meta">
+                        <TaskPublicId publicId={t.publicId} inline />
+                        <span className="bb-task-meta-sep">·</span>
+                        <span>
+                          {t.project.name}
+                          <span className="bb-task-meta-sep"> / </span>
+                          {t.process.name}
+                        </span>
+                        <span className="bb-task-meta-sep">·</span>
+                        <span>ETA {formatTaskEta(t.eta)}</span>
+                        <span className="bb-task-meta-sep">·</span>
+                        <span>Updated {formatUpdatedAt(t.updatedAt)}</span>
+                        <span className="bb-task-meta-sep">·</span>
+                        <span>by {t.createdBy.name}</span>
+                      </div>
+
+                      {taskHotlists.length > 0 ? (
+                        <div className="bb-task-row-hotlists">
+                          {taskHotlists.slice(0, 4).map((hotlist) => (
+                            <Link
+                              key={hotlist.id}
+                              href={`/?hotlistId=${hotlist.hotlistId}`}
+                              className="bb-task-hotlist-chip"
+                              title={formatHotlistLabel(hotlist)}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {hotlist.name}
+                            </Link>
+                          ))}
+                          {taskHotlists.length > 4 ? (
+                            <span className="bb-task-hotlist-more">
+                              +{taskHotlists.length - 4}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
         <div className="bb-admin-list-box-footer">
           <Pagination

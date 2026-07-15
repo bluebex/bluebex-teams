@@ -1144,6 +1144,160 @@ textarea.bb-textarea {
   border-bottom: none;
 }
 
+.bb-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bb-task-item {
+  padding: 1rem 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.bb-task-item:last-child {
+  border-bottom: none;
+}
+
+.bb-task-item:hover {
+  background: color-mix(in oklab, var(--foreground) 2.5%, transparent);
+}
+
+.bb-task-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.bb-task-item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bb-task-item-heading-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.bb-task-item-title {
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.bb-task-item-title:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bb-task-item-assignee {
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: color-mix(in oklab, var(--foreground) 72%, transparent);
+}
+
+.bb-task-item-assignee--empty {
+  font-weight: 400;
+  color: color-mix(in oklab, var(--foreground) 42%, transparent);
+}
+
+.bb-task-item-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.bb-task-item-badges .bb-admin-badge {
+  font-size: 0.5625rem;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.4rem;
+}
+
+.bb-task-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.35rem;
+  font-family: var(--font-dm-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: color-mix(in oklab, var(--foreground) 48%, transparent);
+}
+
+.bb-task-item-meta .bb-admin-cell-secondary {
+  margin: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+.bb-task-meta-sep {
+  opacity: 0.5;
+}
+
+.bb-task-row-hotlists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.1rem;
+}
+
+.bb-task-hotlist-chip {
+  display: inline-flex;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--bb-border);
+  border-radius: 0.25rem;
+  font-family: var(--font-dm-mono), ui-monospace, monospace;
+  font-size: 0.625rem;
+  color: var(--bb-muted);
+  text-decoration: none;
+  background: color-mix(in oklab, var(--foreground) 3%, transparent);
+}
+
+.bb-task-hotlist-chip:hover {
+  color: var(--foreground);
+  border-color: color-mix(in oklab, var(--foreground) 25%, transparent);
+}
+
+.bb-task-hotlist-more {
+  font-family: var(--font-dm-mono), ui-monospace, monospace;
+  font-size: 0.625rem;
+  color: var(--bb-muted);
+  align-self: center;
+}
+
+@media (max-width: 700px) {
+  .bb-task-item-heading {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .bb-task-item-badges {
+    justify-content: flex-start;
+  }
+}
+
 .bb-admin-cell-primary {
   font-weight: 500;
   letter-spacing: -0.015em;
