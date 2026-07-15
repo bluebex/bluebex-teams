@@ -662,37 +662,37 @@ export default function TaskPage() {
                           : null}
                       </div>
                       {item.kind === "status" ? (
-                        <p className="text-sm bb-admin-cell-secondary">
+                        <p className="text-sm bb-activity-log-text">
                           {formatTaskStatusLogLabel(item.fromStatus)} →{" "}
                           {formatTaskStatusLogLabel(item.toStatus)}
                         </p>
                       ) : item.field === "priority" ? (
-                        <p className="text-sm bb-admin-cell-secondary">
+                        <p className="text-sm bb-activity-log-text">
                           {formatTaskPriorityLogLabel(item.fromValue)} →{" "}
                           {formatTaskPriorityLogLabel(item.toValue)}
                         </p>
                       ) : item.field === "category" ? (
-                        <p className="text-sm bb-admin-cell-secondary">
+                        <p className="text-sm bb-activity-log-text">
                           {formatTaskCategoryLogLabel(item.fromValue)} →{" "}
                           {formatTaskCategoryLogLabel(item.toValue)}
                         </p>
                       ) : item.field === "eta" ? (
-                        <p className="text-sm bb-admin-cell-secondary">
+                        <p className="text-sm bb-activity-log-text">
                           {formatTaskEtaLogLabel(item.fromValue)} →{" "}
                           {formatTaskEtaLogLabel(item.toValue)}
                         </p>
                       ) : item.field === "description" ? (
-                        <p className="text-sm bb-admin-cell-secondary bb-preserve-lines">
+                        <p className="text-sm bb-activity-log-text bb-preserve-lines">
                           {formatChangeText(item.fromValue)}
                           {formatChangeText(item.fromValue) ? " → " : "→ "}
                           {formatChangeText(item.toValue)}
                         </p>
                       ) : item.field === "hotlist_add" || item.field === "hotlist_remove" ? (
-                        <p className="text-sm bb-admin-cell-secondary">
+                        <p className="text-sm bb-activity-log-text">
                           {formatHotlistChangeLogText(item.field, item.fromValue, item.toValue)}
                         </p>
                       ) : (
-                        <p className="text-sm bb-admin-cell-secondary">
+                        <p className="text-sm bb-activity-log-text">
                           {formatChangeText(item.fromValue)}
                           {formatChangeText(item.fromValue) ? " → " : "→ "}
                           {formatChangeText(item.toValue)}

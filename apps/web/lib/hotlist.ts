@@ -23,7 +23,15 @@ export function formatHotlistChangeLogText(
 }
 
 export function formatChangeFieldLabel(field: string): string {
-  if (field === "hotlist_add" || field === "hotlist_remove") return "hotlist";
-  if (field === "assignedTo") return "Assignee";
-  return field;
+  const labels: Record<string, string> = {
+    title: "Title",
+    description: "Description",
+    assignedTo: "Assignee",
+    priority: "Priority",
+    category: "Category",
+    eta: "ETA",
+    hotlist_add: "Hotlist",
+    hotlist_remove: "Hotlist",
+  };
+  return labels[field] ?? field.charAt(0).toUpperCase() + field.slice(1);
 }

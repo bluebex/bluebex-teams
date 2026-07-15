@@ -9,10 +9,6 @@ export function middleware(request: NextRequest) {
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);
   const isLoginPage = pathname === LOGIN_PATH;
 
-  if (hasSession && isLoginPage) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
   if (!hasSession && !isLoginPage) {
     return NextResponse.redirect(new URL(LOGIN_PATH, request.url));
   }

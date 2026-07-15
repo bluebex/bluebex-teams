@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -11,6 +11,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.user) router.replace("/");
+      } finally {
+        if (!cancelled) setCheckingSession(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +56,14 @@ export default function LoginPage() {
 
   return (
     <main className="bb-login-split">
+      {checkingSession ? (
+        <section className="bb-login-form-side">
+          <div className="bb-login-form-wrap">
+            <p className="bb-admin-cell-empty">Loading…</p>
+          </div>
+        </section>
+      ) : (
+        <>
       <aside className="bb-login-visual">
         <div className="bb-login-visual-inner">
           <p className="bb-login-visual-brand">bluebex teams</p>
@@ -88,6 +114,8 @@ export default function LoginPage() {
           </p>
         </div>
       </section>
+        </>
+      )}
     </main>
   );
 }

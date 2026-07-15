@@ -42,7 +42,7 @@ authRouter.post("/login", async (req, res) => {
   });
 });
 
-authRouter.post("/logout", requireAuth, async (req: AuthedRequest, res) => {
+authRouter.post("/logout", authOptional, async (req: AuthedRequest, res) => {
   const token = getSessionCookie(req);
   if (token) await revokeSession(String(token));
   clearSessionCookie(res);

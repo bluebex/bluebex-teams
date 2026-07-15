@@ -19,6 +19,7 @@ import { taskPath } from "@/lib/taskPublicId";
 import { TASK_PRIORITY_OPTIONS, type TaskPriority } from "@/lib/taskPriority";
 import { TASK_CATEGORY_OPTIONS, type TaskCategory } from "@/lib/taskCategory";
 import { type HotlistLite } from "@/lib/hotlist";
+import { isUnauthenticatedResponse, redirectToLogin } from "@/lib/authClient";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const TASKS_PAGE_SIZE = 20;
@@ -193,16 +194,15 @@ export function TaskListView({
 
   const loadCurrentUser = useCallback(async () => {
     const res = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
-    if (res.status === 401) return (window.location.href = "/login");
+    const data = await res.json().catch(() => ({}));
+    if (isUnauthenticatedResponse(res.status, data.user)) return redirectToLogin();
     if (!res.ok) throw new Error("Failed to load user");
-    const data = await res.json();
-    if (!data.user) return (window.location.href = "/login");
     setCurrentUser(data.user);
   }, []);
 
   const loadTasks = useCallback(async () => {
     const res = await fetch(`${API_URL}/tasks${qs}`, { credentials: "include" });
-    if (res.status === 401) return (window.location.href = "/login");
+    if (res.status === 401) return redirectToLogin();
     if (!res.ok) throw new Error("Failed to load tasks");
     const data = await res.json();
     setTasks(data.tasks || []);
@@ -214,7 +214,7 @@ export function TaskListView({
 
   const loadUsers = useCallback(async () => {
     const res = await fetch(`${API_URL}/tasks/meta`, { credentials: "include" });
-    if (res.status === 401) return (window.location.href = "/login");
+    if (res.status === 401) return redirectToLogin();
     if (!res.ok) throw new Error("Failed to load users");
     const data = await res.json();
     setUsers(data.users || []);

@@ -1209,6 +1209,13 @@ textarea.bb-textarea {
   color: var(--bb-muted);
 }
 
+.bb-activity-log-text {
+  font-family: var(--font-dm-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  letter-spacing: -0.02em;
+  color: color-mix(in oklab, var(--foreground) 55%, transparent);
+}
+
 .bb-admin-cell-sub {
   display: block;
   margin-top: 0.2rem;
