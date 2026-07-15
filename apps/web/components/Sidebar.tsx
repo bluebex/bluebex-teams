@@ -140,6 +140,13 @@ export function Sidebar() {
             <span>Projects</span>
           </Link>
           <Link
+            href="/hotlists"
+            className={`bb-sidebar-link${pathname === "/hotlists" ? " bb-sidebar-link--active" : ""}`}
+          >
+            <TagIcon />
+            <span>Hotlists</span>
+          </Link>
+          <Link
             href="/settings"
             className={`bb-sidebar-link${pathname === "/settings" ? " bb-sidebar-link--active" : ""}`}
           >

@@ -4,7 +4,7 @@ import { prisma } from "@bluebex/db";
 import type { Prisma } from "@prisma/client";
 import { TaskStatus } from "@prisma/client";
 import { requireAuth, type AuthedRequest } from "../lib/auth.js";
-import { accessibleProcessIds, accessibleProjectsWithProcesses, assignableUsersForProcesses, canAccessProcess, canUserBeAssignedToProcess } from "../lib/access.js";
+import { accessibleProcessIds, accessibleProjectsWithProcesses, accessibleHotlists, assignableUsersForProcesses, canAccessProcess, canUserBeAssignedToProcess } from "../lib/access.js";
 import { generateUniqueTaskPublicId, taskWhereFromParam } from "../lib/taskPublicId.js";
 import { resolveHotlistInternalIds } from "../lib/hotlistId.js";
 import { CLOSED_TASK_STATUSES } from "../lib/taskStatus.js";
@@ -351,12 +351,13 @@ tasksRouter.get("/meta", async (req: AuthedRequest, res) => {
   const [projects, users, hotlists] = await Promise.all([
     accessibleProjectsWithProcesses(req.user!.id),
     assignableUsersForProcesses(targetProcessIds),
-    prisma.hotlist.findMany({
-      orderBy: { name: "asc" },
-      select: hotlistPublicSelect,
-    }),
+    accessibleHotlists(req.user!.id),
   ]);
-  res.json({ projects, users, hotlists });
+  res.json({
+    projects,
+    users,
+    hotlists: hotlists.map(({ id, hotlistId, name }) => ({ id, hotlistId, name })),
+  });
 });
 
 tasksRouter.get("/:id", async (req: AuthedRequest, res) => {

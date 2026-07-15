@@ -259,20 +259,29 @@ export function TaskListView({
     };
   }, [loadTasks, errorMessage]);
 
+  const selectedHotlist = hotlists.find((h) => h.hotlistId === hotlistId);
+
   const pageTitle =
-    pageTitleProp ?? (fixedCategory === "BUG" ? "Bugs" : VIEW_TITLES[view] ?? "Tasks");
+    pageTitleProp ??
+    (fixedCategory === "BUG"
+      ? "Bugs"
+      : selectedHotlist
+        ? selectedHotlist.name
+        : VIEW_TITLES[view] ?? "Tasks");
 
   const pageSubtitle =
     pageSubtitleProp ??
     (fixedCategory === "BUG"
       ? "Track and manage reported bugs."
-      : view === "assigned"
-        ? "Tasks currently assigned to you."
-        : view === "created"
-          ? "Tasks you have created."
-          : currentUser
-            ? `Welcome, ${currentUser.name}. View and manage your work.`
-            : "View and manage your tasks.");
+      : selectedHotlist
+        ? `Tasks in hotlist ${selectedHotlist.hotlistId} that you can access.`
+        : view === "assigned"
+          ? "Tasks currently assigned to you."
+          : view === "created"
+            ? "Tasks you have created."
+            : currentUser
+              ? `Welcome, ${currentUser.name}. View and manage your work.`
+              : "View and manage your tasks.");
 
   const isStatusFiltered =
     selectedStatuses.length > 0 &&

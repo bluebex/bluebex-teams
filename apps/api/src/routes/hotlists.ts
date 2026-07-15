@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "@bluebex/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth.js";
+import { accessibleHotlists } from "../lib/access.js";
 import { generateUniqueHotlistId } from "../lib/hotlistId.js";
 
 export const hotlistsRouter = Router();
@@ -10,11 +11,8 @@ hotlistsRouter.use(requireAuth);
 
 const hotlistSelect = { id: true, hotlistId: true, name: true } as const;
 
-hotlistsRouter.get("/", async (_req: AuthedRequest, res) => {
-  const hotlists = await prisma.hotlist.findMany({
-    orderBy: { name: "asc" },
-    select: hotlistSelect,
-  });
+hotlistsRouter.get("/", async (req: AuthedRequest, res) => {
+  const hotlists = await accessibleHotlists(req.user!.id);
   res.json({ hotlists });
 });
 

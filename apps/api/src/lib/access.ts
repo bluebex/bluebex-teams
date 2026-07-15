@@ -147,3 +147,34 @@ export async function assignableUsersForProcesses(processIds: string[]) {
   });
 }
 
+/** Hotlists that have at least one task in the user's accessible processes. */
+export async function accessibleHotlists(userId: string) {
+  const processIds = await accessibleProcessIds(userId);
+  if (processIds.length === 0) return [];
+
+  const hotlists = await prisma.hotlist.findMany({
+    where: {
+      taskLinks: {
+        some: {
+          task: { processId: { in: processIds } },
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      hotlistId: true,
+      name: true,
+      taskLinks: {
+        where: { task: { processId: { in: processIds } } },
+        select: { taskId: true },
+      },
+    },
+  });
+
+  return hotlists.map(({ taskLinks, ...hotlist }) => ({
+    ...hotlist,
+    taskCount: taskLinks.length,
+  }));
+}
+
